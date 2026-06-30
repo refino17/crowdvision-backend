@@ -1,0 +1,11 @@
+opencv-python>=4.10.0
+ultralytics>=8.4.0
+numpy>=2.0.0
+pandas>=2.0.0
+fastapi
+uvicorn
+reportlab
+openpyxl
+psutil
+torch
+python-multipart

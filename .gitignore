@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual Environment
+venv/
+.env
+
+# VSCode
+.vscode/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# Frontend (ignore for now)
+frontend/
+runs/
+yolov8*.pt
+
+# Large outputs
+runs/
+
+# Cache
+.cache/
+
+# PyTorch cache
+torch_cache/

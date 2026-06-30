@@ -1,0 +1,17 @@
+{
+  "updated_at": "2026-06-30 12:17:57",
+  "updated_at_epoch": 1782821877.2759295,
+  "active_profile": "webcam",
+  "source": "0",
+  "online": true,
+  "status": "Online",
+  "reason": "Receiving frames",
+  "fps": 8.15,
+  "ai_fps": 0.35,
+  "people": 0,
+  "zone_count": 0,
+  "occupancy": 0,
+  "density": "Low",
+  "alert": "SAFE: Crowd level is low.",
+  "mode": "LOW"
+}

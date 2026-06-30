@@ -1,0 +1,80 @@
+{
+  "usb_camera_20260623_180914": {
+    "name": "USB Camera",
+    "source": 0,
+    "source_type": "usb_camera",
+    "created_at": "2026-06-23 18:09:14",
+    "zone": {
+      "name": "Main Monitoring Zone",
+      "x1": 40,
+      "y1": 80,
+      "x2": 560,
+      "y2": 520
+    },
+    "zones": [
+      {
+        "name": "Main Monitoring Zone",
+        "x1": 40,
+        "y1": 80,
+        "x2": 560,
+        "y2": 520
+      }
+    ],
+    "line": {
+      "name": "Entry / Exit Line",
+      "y": 300
+    }
+  },
+  "phone_camera_20260627_132229": {
+    "name": "Phone Camera",
+    "source": "http://10.93.59.215:8080/video",
+    "source_type": "phone_camera",
+    "created_at": "2026-06-27 13:22:29",
+    "zone": {
+      "name": "Main Monitoring Zone",
+      "x1": 40,
+      "y1": 80,
+      "x2": 560,
+      "y2": 520
+    },
+    "zones": [
+      {
+        "name": "Main Monitoring Zone",
+        "x1": 40,
+        "y1": 80,
+        "x2": 560,
+        "y2": 520
+      }
+    ],
+    "line": {
+      "name": "Entry / Exit Line",
+      "y": 300
+    }
+  },
+  "uploaded_video_20260629_095850": {
+    "name": "Uploaded Video",
+    "source": "data/uploads/20260629_095850_test.mp4",
+    "source_type": "uploaded_video",
+    "created_at": "2026-06-29 09:58:50",
+    "zone": {
+      "name": "Main Monitoring Zone",
+      "x1": 40,
+      "y1": 80,
+      "x2": 560,
+      "y2": 520
+    },
+    "zones": [
+      {
+        "name": "Main Monitoring Zone",
+        "x1": 40,
+        "y1": 80,
+        "x2": 560,
+        "y2": 520
+      }
+    ],
+    "line": {
+      "name": "Entry / Exit Line",
+      "y": 300
+    }
+  }
+}
