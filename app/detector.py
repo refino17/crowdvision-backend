@@ -8,19 +8,22 @@ from ultralytics import YOLO
 
 class AnonymousIdentityManager:
     """
-    Privacy-friendly person memory.
+    Privacy-friendly anonymous person memory.
 
-    It does not use face recognition.
-    It only links short-term track IDs using:
-    - tracker ID continuity from YOLO/ByteTrack
+    This is NOT face recognition.
+
+    It reduces double-counting by linking short-term person tracks using:
+    - YOLO / ByteTrack raw tracking ID continuity
     - body box position
     - bounding-box overlap
-    - simple clothing/appearance color histogram
+    - simple clothing/body colour appearance histogram
 
-    Result:
-    - smoother stable IDs
-    - fewer duplicate counts when a person disappears briefly and returns
-    - no biometric identity storage
+    Meaning:
+    - tracked: same tracker ID continues normally
+    - reidentified: person disappeared briefly and was matched again
+    - duplicate_prevented: a re-identification prevented creating a new person identity
+
+    This keeps the system privacy-safe while improving unique person counting.
     """
 
     def __init__(
@@ -47,18 +50,21 @@ class AnonymousIdentityManager:
         self.raw_to_stable = {}
         self.tracks = {}
 
+        self.total_created = 0
         self.total_reidentified = 0
         self.duplicates_prevented = 0
-        self.total_created = 0
+        self.raw_continuity_updates = 0
         self.last_frame_active_ids = set()
 
     def reset(self):
         self.next_stable_id = 1
         self.raw_to_stable = {}
         self.tracks = {}
+
+        self.total_created = 0
         self.total_reidentified = 0
         self.duplicates_prevented = 0
-        self.total_created = 0
+        self.raw_continuity_updates = 0
         self.last_frame_active_ids = set()
 
     def get_center(self, bbox):
@@ -108,12 +114,12 @@ class AnonymousIdentityManager:
         if person_crop.size == 0:
             return None
 
-        # Focus more on upper/middle body for clothing colour.
         crop_h = person_crop.shape[0]
         upper_body = person_crop[: max(1, int(crop_h * 0.75)), :]
 
         try:
             hsv = cv2.cvtColor(upper_body, cv2.COLOR_BGR2HSV)
+
             hist = cv2.calcHist(
                 [hsv],
                 [0, 1],
@@ -121,6 +127,7 @@ class AnonymousIdentityManager:
                 [self.hist_bins, self.hist_bins],
                 [0, 180, 0, 256]
             )
+
             cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
             return hist
         except Exception:
@@ -149,7 +156,8 @@ class AnonymousIdentityManager:
             "first_seen": now,
             "last_seen": now,
             "seen_count": 1,
-            "active": True
+            "active": True,
+            "state": "new"
         }
 
         if raw_id is not None:
@@ -158,7 +166,7 @@ class AnonymousIdentityManager:
         self.total_created += 1
         return stable_id, "new"
 
-    def update_track(self, stable_id, raw_id, bbox, appearance, now, state="active"):
+    def update_track(self, stable_id, raw_id, bbox, appearance, now, state="tracked"):
         track = self.tracks.get(stable_id)
 
         if track is None:
@@ -169,6 +177,7 @@ class AnonymousIdentityManager:
             self.raw_to_stable[raw_id] = stable_id
 
         old_appearance = track.get("appearance")
+
         if old_appearance is not None and appearance is not None:
             try:
                 appearance = (0.65 * old_appearance) + (0.35 * appearance)
@@ -197,6 +206,7 @@ class AnonymousIdentityManager:
                 continue
 
             previous_bbox = track.get("bbox")
+
             if previous_bbox is None:
                 continue
 
@@ -209,7 +219,6 @@ class AnonymousIdentityManager:
             iou_score = self.get_iou(bbox, previous_bbox)
             color_score = self.compare_appearance(appearance, track.get("appearance"))
 
-            # If there is no overlap, require at least weak colour similarity.
             if iou_score < 0.05 and color_score < self.min_color_score:
                 continue
 
@@ -245,6 +254,7 @@ class AnonymousIdentityManager:
             stable_id = None
             duplicate_state = "new"
             match_score = 0.0
+            color_score = 0.0
 
             if raw_id is not None and raw_id in self.raw_to_stable:
                 candidate_id = self.raw_to_stable[raw_id]
@@ -252,10 +262,10 @@ class AnonymousIdentityManager:
                 if candidate_id not in used_stable_ids and candidate_id in self.tracks:
                     stable_id = candidate_id
                     duplicate_state = "tracked"
-                    self.duplicates_prevented += 1
+                    self.raw_continuity_updates += 1
 
             if stable_id is None:
-                matched_id, score, color_score = self.find_best_memory_match(
+                matched_id, score, matched_color_score = self.find_best_memory_match(
                     bbox,
                     appearance,
                     now,
@@ -265,7 +275,9 @@ class AnonymousIdentityManager:
                 if matched_id is not None:
                     stable_id = matched_id
                     match_score = score
+                    color_score = matched_color_score
                     duplicate_state = "reidentified"
+
                     self.total_reidentified += 1
                     self.duplicates_prevented += 1
 
@@ -280,6 +292,7 @@ class AnonymousIdentityManager:
             detection["stable_tracking_id"] = stable_id
             detection["duplicate_state"] = duplicate_state
             detection["reid_match_score"] = round(float(match_score), 3)
+            detection["reid_color_score"] = round(float(color_score), 3)
             detection["track_age_seconds"] = round(now - self.tracks[stable_id]["first_seen"], 1)
 
             assigned_detections.append(detection)
@@ -309,12 +322,30 @@ class AnonymousIdentityManager:
             self.tracks.pop(stable_id, None)
 
     def get_summary(self):
+        active_tracks = int(len(self.last_frame_active_ids))
+        memory_tracks = int(len(self.tracks))
+
+        if self.total_created <= 0 and memory_tracks > 0:
+            session_unique_people = memory_tracks
+        else:
+            session_unique_people = self.total_created
+
+        if self.total_created == 0:
+            tracking_quality = "Waiting"
+        elif self.total_reidentified > 0:
+            tracking_quality = "Re-identification active"
+        else:
+            tracking_quality = "Tracking active"
+
         return {
-            "session_unique_people": int(max(self.total_created, len(self.tracks))),
-            "active_tracks": int(len(self.last_frame_active_ids)),
-            "memory_tracks": int(len(self.tracks)),
+            "session_unique_people": int(session_unique_people),
+            "active_tracks": active_tracks,
+            "memory_tracks": memory_tracks,
             "reidentified_people": int(self.total_reidentified),
             "duplicates_prevented": int(self.duplicates_prevented),
+            "raw_tracker_continuity": int(self.raw_continuity_updates),
+            "tracking_quality": tracking_quality,
+            "memory_seconds": int(self.memory_seconds),
             "privacy_mode": "Anonymous body tracking"
         }
 
@@ -405,7 +436,6 @@ class PeopleDetector:
                 y2 = int(y2 * scale_y)
 
                 confidence = float(box.conf[0])
-
                 raw_tracking_id = None
 
                 if box.id is not None:
@@ -419,7 +449,10 @@ class PeopleDetector:
                     "tracking_id": tracking_id,
                     "raw_tracking_id": raw_tracking_id,
                     "stable_tracking_id": tracking_id,
-                    "duplicate_state": "raw"
+                    "duplicate_state": "raw",
+                    "reid_match_score": 0,
+                    "reid_color_score": 0,
+                    "track_age_seconds": 0
                 })
 
         if self.enable_reid:
@@ -435,6 +468,9 @@ class PeopleDetector:
                 "memory_tracks": 0,
                 "reidentified_people": 0,
                 "duplicates_prevented": 0,
+                "raw_tracker_continuity": 0,
+                "tracking_quality": "YOLO tracking only",
+                "memory_seconds": 0,
                 "privacy_mode": "YOLO tracking only"
             }
 

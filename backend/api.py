@@ -11,6 +11,7 @@ import subprocess
 import signal
 import sys
 import json
+
 from app.report_generator import txt_report_to_pdf
 from app.config import (
     get_camera_profiles as load_camera_profiles,
@@ -59,8 +60,13 @@ app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 for _evidence_dir in ["data/evidence", "data/snapshots", "data/alerts"]:
     os.makedirs(_evidence_dir, exist_ok=True)
+
     try:
-        app.mount(f"/{_evidence_dir.replace('data/', '')}", StaticFiles(directory=_evidence_dir), name=_evidence_dir.replace("/", "_"))
+        app.mount(
+            f"/{_evidence_dir.replace('data/', '')}",
+            StaticFiles(directory=_evidence_dir),
+            name=_evidence_dir.replace("/", "_")
+        )
     except RuntimeError:
         pass
 
@@ -75,6 +81,104 @@ def load_events():
         return df
 
     return df.fillna(0)
+
+
+def default_tracking_summary():
+    return {
+        "session_unique_people": 0,
+        "active_tracks": 0,
+        "memory_tracks": 0,
+        "reidentified_people": 0,
+        "duplicates_prevented": 0,
+        "raw_tracker_continuity": 0,
+        "tracking_quality": "Waiting",
+        "memory_seconds": 0,
+        "privacy_mode": "Anonymous body tracking"
+    }
+
+
+def normalize_tracking_summary(status):
+    if not status or not isinstance(status, dict):
+        return default_tracking_summary()
+
+    tracking = status.get("tracking")
+
+    if not isinstance(tracking, dict):
+        return default_tracking_summary()
+
+    normalized = default_tracking_summary()
+
+    for key in normalized.keys():
+        if key in tracking:
+            normalized[key] = tracking.get(key)
+
+    integer_keys = [
+        "session_unique_people",
+        "active_tracks",
+        "memory_tracks",
+        "reidentified_people",
+        "duplicates_prevented",
+        "raw_tracker_continuity",
+        "memory_seconds"
+    ]
+
+    for key in integer_keys:
+        try:
+            normalized[key] = int(float(normalized.get(key, 0)))
+        except Exception:
+            normalized[key] = 0
+
+    normalized["privacy_mode"] = tracking.get("privacy_mode", "Anonymous body tracking")
+    normalized["tracking_quality"] = tracking.get("tracking_quality", "Tracking active")
+
+    return normalized
+
+
+def read_camera_status_file():
+    if not os.path.exists(CAMERA_STATUS_FILE):
+        return None
+
+    try:
+        with open(CAMERA_STATUS_FILE, "r") as file:
+            return json.load(file)
+    except Exception:
+        return None
+
+
+def write_camera_status_file(status):
+    try:
+        os.makedirs(os.path.dirname(CAMERA_STATUS_FILE), exist_ok=True)
+
+        with open(CAMERA_STATUS_FILE, "w") as file:
+            json.dump(status, file, indent=4)
+
+        return True
+    except Exception as error:
+        print(f"Unable to write camera status file: {error}")
+        return False
+
+
+def mark_camera_status_stopped(reason="Monitoring engine stopped by operator"):
+    previous_status = read_camera_status_file() or {}
+    performance = get_performance_status()
+    now = time.time()
+
+    stopped_status = {
+        **previous_status,
+        "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "updated_at_epoch": now,
+        "active_profile": get_active_camera_profile(),
+        "source": previous_status.get("source", ""),
+        "online": False,
+        "status": "Stopped",
+        "reason": reason,
+        "fps": 0,
+        "ai_fps": 0,
+        "mode": performance.get("resolved_mode", "LOW"),
+        "tracking": normalize_tracking_summary(previous_status)
+    }
+
+    write_camera_status_file(stopped_status)
 
 
 def generate_live_stream():
@@ -132,6 +236,7 @@ def get_saved_engine_pid():
     try:
         with open(ENGINE_PID_FILE, "r") as file:
             pid = int(file.read().strip())
+
         return pid
     except Exception:
         return None
@@ -139,6 +244,7 @@ def get_saved_engine_pid():
 
 def save_engine_pid(pid):
     os.makedirs("data", exist_ok=True)
+
     with open(ENGINE_PID_FILE, "w") as file:
         file.write(str(pid))
 
@@ -187,6 +293,7 @@ def get_engine_pid():
         return ENGINE_PROCESS.pid
 
     saved_pid = get_saved_engine_pid()
+
     if saved_pid and is_pid_running(saved_pid):
         return saved_pid
 
@@ -208,6 +315,7 @@ def stop_pid(pid):
     for _ in range(20):
         if not is_pid_running(pid):
             return
+
         time.sleep(0.2)
 
     try:
@@ -285,7 +393,6 @@ def start_engine():
     env["CROWDVISION_PERFORMANCE_MODE"] = performance["selected_mode"]
     env["CROWDVISION_RESOLVED_PERFORMANCE_MODE"] = performance["resolved_mode"]
 
-    # Keep numerical libraries calm on small machines.
     if performance["resolved_mode"] in ["LOW", "BALANCED"]:
         env["CROWDVISION_LOW_RESOURCE"] = "1"
         env["OMP_NUM_THREADS"] = "1"
@@ -328,6 +435,8 @@ def stop_engine():
     if not pid:
         ENGINE_PROCESS = None
         clear_engine_pid()
+        mark_camera_status_stopped("Monitoring engine is not running")
+
         return {
             "message": "AI monitoring engine is not running",
             "running": False
@@ -337,6 +446,7 @@ def stop_engine():
 
     ENGINE_PROCESS = None
     clear_engine_pid()
+    mark_camera_status_stopped("Monitoring engine stopped by operator")
 
     return {
         "message": "AI monitoring engine stopped",
@@ -352,7 +462,10 @@ def restart_engine():
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "online", "service": "CrowdVision AI API"}
+    return {
+        "status": "online",
+        "service": "CrowdVision AI API"
+    }
 
 
 @app.get("/api/video-feed")
@@ -366,9 +479,36 @@ def video_feed():
 @app.get("/api/live-image")
 def get_live_image():
     if not os.path.exists(LIVE_FRAME_PATH):
-        return {"image": None}
+        return {
+            "image": None,
+            "live": False,
+            "frame_age_seconds": None
+        }
 
-    return {"image": "http://127.0.0.1:8000/live/latest_frame.jpg"}
+    status = read_camera_status_file()
+    running = is_engine_running()
+    now = time.time()
+
+    frame_age = round(now - os.path.getmtime(LIVE_FRAME_PATH), 2)
+
+    active_status_age = None
+
+    if status and status.get("updated_at_epoch"):
+        active_status_age = round(now - float(status.get("updated_at_epoch", now)), 2)
+
+    live = bool(
+        running and
+        status and
+        status.get("online") and
+        active_status_age is not None and
+        active_status_age <= CAMERA_OFFLINE_AFTER_SECONDS
+    )
+
+    return {
+        "image": "http://127.0.0.1:8000/live/latest_frame.jpg",
+        "live": live,
+        "frame_age_seconds": frame_age
+    }
 
 
 @app.get("/api/reports")
@@ -433,16 +573,20 @@ def read_report(filename: str):
 @app.get("/api/events")
 def get_events():
     df = load_events()
+
     if df.empty:
         return {"events": []}
+
     return {"events": df.tail(100).to_dict(orient="records")}
 
 
 @app.get("/api/latest-event")
 def get_latest_event():
     df = load_events()
+
     if df.empty:
         return {"latest_event": None}
+
     return {"latest_event": df.tail(1).to_dict(orient="records")[0]}
 
 
@@ -485,7 +629,12 @@ def get_intelligence():
             "alert_rate": 0
         }
 
-    risk_order = {"Low": 1, "Medium": 2, "High": 3, "Critical": 4}
+    risk_order = {
+        "Low": 1,
+        "Medium": 2,
+        "High": 3,
+        "Critical": 4
+    }
 
     df = df.copy()
     df["risk_score"] = df["density_level"].map(risk_order).fillna(0)
@@ -673,6 +822,7 @@ def get_incident_summary():
 @app.get("/api/chart-data")
 def get_chart_data():
     df = load_events()
+
     if df.empty:
         return {"chart_data": []}
 
@@ -708,6 +858,7 @@ def get_chart_data():
 @app.get("/api/alert-distribution")
 def get_alert_distribution():
     df = load_events()
+
     if df.empty:
         return {"alerts": []}
 
@@ -715,6 +866,16 @@ def get_alert_distribution():
     counts.columns = ["density_level", "count"]
 
     return {"alerts": counts.to_dict(orient="records")}
+
+
+@app.get("/api/tracking-summary")
+def get_tracking_summary_endpoint():
+    status = read_camera_status_file()
+
+    return {
+        "tracking": normalize_tracking_summary(status),
+        "status": status
+    }
 
 
 def get_export_dataframe(export_type):
@@ -729,11 +890,13 @@ def get_export_dataframe(export_type):
     if export_type == "incidents":
         if "incident_active" not in df.columns:
             return pd.DataFrame()
+
         return df[df["incident_active"].astype(str) == "True"]
 
     if export_type == "anomalies":
         if "anomaly_detected" not in df.columns:
             return pd.DataFrame()
+
         return df[df["anomaly_detected"].astype(str) == "True"]
 
     if export_type == "summary":
@@ -810,21 +973,12 @@ def export_excel(export_type: str):
     )
 
 
-def read_camera_status_file():
-    if not os.path.exists(CAMERA_STATUS_FILE):
-        return None
-
-    try:
-        with open(CAMERA_STATUS_FILE, "r") as file:
-            return json.load(file)
-    except Exception:
-        return None
-
-
 def get_latest_event_record():
     df = load_events()
+
     if df.empty:
         return None
+
     return df.tail(1).to_dict(orient="records")[0]
 
 
@@ -849,11 +1003,15 @@ def list_evidence_files():
                 "directory": directory,
                 "type": "Snapshot",
                 "size": os.path.getsize(file_path),
-                "created": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(file_path))),
+                "created": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(os.path.getmtime(file_path))
+                ),
                 "url": f"http://127.0.0.1:8000/{directory.replace('data/', '')}/{filename}" if directory.startswith("data/") else ""
             })
 
     evidence.sort(key=lambda item: item["created"], reverse=True)
+
     return evidence
 
 
@@ -867,10 +1025,14 @@ def get_camera_health():
     now = time.time()
 
     frame_age = None
+    preview_url = None
+
     if os.path.exists(LIVE_FRAME_PATH):
         frame_age = round(now - os.path.getmtime(LIVE_FRAME_PATH), 2)
+        preview_url = "http://127.0.0.1:8000/live/latest_frame.jpg"
 
     active_status_age = None
+
     if status and status.get("updated_at_epoch"):
         active_status_age = round(now - float(status.get("updated_at_epoch", now)), 2)
 
@@ -882,6 +1044,7 @@ def get_camera_health():
         active_status_age <= CAMERA_OFFLINE_AFTER_SECONDS
     )
 
+    active_tracking = normalize_tracking_summary(status)
     cameras = []
 
     for key, profile in profiles.items():
@@ -889,6 +1052,7 @@ def get_camera_health():
 
         if is_active:
             health = "Online" if active_online else ("Starting" if running else "Stopped")
+
             cameras.append({
                 "key": key,
                 "name": profile.get("name", key),
@@ -900,11 +1064,13 @@ def get_camera_health():
                 "last_seen": status.get("updated_at") if status else None,
                 "age_seconds": active_status_age,
                 "frame_age_seconds": frame_age,
+                "preview_url": preview_url,
                 "people": status.get("people", latest_event.get("total_people", 0) if latest_event else 0) if status else 0,
                 "density": status.get("density", latest_event.get("density_level", "Unknown") if latest_event else "Unknown") if status else "Unknown",
                 "fps": status.get("fps", 0) if status else 0,
                 "ai_fps": status.get("ai_fps", 0) if status else 0,
-                "reason": status.get("reason", "") if status else ""
+                "reason": status.get("reason", "") if status else "",
+                "tracking": active_tracking
             })
         else:
             cameras.append({
@@ -918,18 +1084,23 @@ def get_camera_health():
                 "last_seen": None,
                 "age_seconds": None,
                 "frame_age_seconds": None,
+                "preview_url": None,
                 "people": 0,
                 "density": "Standby",
                 "fps": 0,
                 "ai_fps": 0,
-                "reason": "Not active"
+                "reason": "Not active",
+                "tracking": default_tracking_summary()
             })
 
     return {
         "active_profile": active_profile,
         "engine_running": running,
         "active_online": active_online,
+        "stream_live": active_online,
         "latest_frame_age_seconds": frame_age,
+        "live_frame_url": preview_url,
+        "tracking": active_tracking,
         "status": status,
         "cameras": cameras
     }
@@ -967,6 +1138,7 @@ def get_notifications():
 
     if latest_event:
         density = str(latest_event.get("density_level", "Unknown"))
+
         if density in ["High", "Critical"]:
             notifications.append({
                 "type": "crowd",
@@ -1000,6 +1172,7 @@ def get_notifications():
 @app.get("/api/evidence")
 def get_evidence():
     return {"evidence": list_evidence_files()}
+
 
 @app.get("/api/camera-profiles")
 def get_camera_profiles_endpoint():
@@ -1042,7 +1215,11 @@ def activate_camera_profile(profile_key: str):
 
 
 def create_source_key(prefix):
-    safe_prefix = "".join(ch.lower() if ch.isalnum() else "_" for ch in prefix).strip("_")
+    safe_prefix = "".join(
+        ch.lower() if ch.isalnum() else "_"
+        for ch in prefix
+    ).strip("_")
+
     return f"{safe_prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 
@@ -1088,6 +1265,7 @@ def create_device_source(
 ):
     key = create_source_key(source_type)
     profile = default_source_profile(name, device_index, source_type)
+
     add_camera_source_profile(key, profile)
     set_active_camera_profile(key)
 
@@ -1107,10 +1285,14 @@ def create_stream_source(
     source_type: str = Form("ip_camera")
 ):
     if not stream_url.startswith(("http://", "https://", "rtsp://", "rtmp://")):
-        raise HTTPException(status_code=400, detail="Stream URL must start with http, https, rtsp, or rtmp")
+        raise HTTPException(
+            status_code=400,
+            detail="Stream URL must start with http, https, rtsp, or rtmp"
+        )
 
     key = create_source_key(source_type)
     profile = default_source_profile(name, stream_url, source_type)
+
     add_camera_source_profile(key, profile)
     set_active_camera_profile(key)
 
@@ -1137,19 +1319,26 @@ async def upload_video_source(
 
     os.makedirs(UPLOADS_DIR, exist_ok=True)
 
-    safe_name = "".join(ch if ch.isalnum() or ch in ["-", "_", "."] else "_" for ch in original_name)
+    safe_name = "".join(
+        ch if ch.isalnum() or ch in ["-", "_", "."] else "_"
+        for ch in original_name
+    )
+
     stored_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{safe_name}"
     file_path = os.path.join(UPLOADS_DIR, stored_name)
 
     with open(file_path, "wb") as output_file:
         while True:
             chunk = await file.read(1024 * 1024)
+
             if not chunk:
                 break
+
             output_file.write(chunk)
 
     key = create_source_key("uploaded_video")
     profile = default_source_profile(name, file_path, "uploaded_video")
+
     add_camera_source_profile(key, profile)
     set_active_camera_profile(key)
 
