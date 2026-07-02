@@ -31,6 +31,8 @@ from config import (
     ENABLE_ZONE_MONITORING,
     ENABLE_LINE_CROSSING,
     LINE_CROSSING_COOLDOWN,
+    LINE_CROSSING_HYSTERESIS,
+    TRACK_LOST_TTL_FRAMES,
     ENABLE_HEATMAP,
     HEATMAP_ONLY_INSIDE_ZONE,
     HEATMAP_DECAY_RATE,
@@ -42,6 +44,15 @@ from config import (
     ENABLE_PROFESSIONAL_UI,
     SIDE_PANEL_WIDTH,
     WINDOW_NAME,
+    ENABLE_ANONYMOUS_REID,
+    REID_MEMORY_SECONDS,
+    REID_MAX_CENTER_DISTANCE,
+    REID_MIN_MATCH_SCORE,
+    REID_MIN_COLOR_SCORE,
+    REID_IOU_WEIGHT,
+    REID_DISTANCE_WEIGHT,
+    REID_COLOR_WEIGHT,
+    REID_HIST_BINS,
     get_active_camera_profile,
     get_camera_profiles
 )
@@ -80,12 +91,10 @@ from anomaly import analyze_anomaly
 from report_generator import generate_incident_report, generate_anomaly_report
 
 
-
 def resize_frame_for_live(frame, max_width=960):
     """
-    Resize the browser preview frame only.
-    This does not force the phone/IP camera stream itself.
-    It only reduces the image written to data/live/latest_frame.jpg.
+    Resize browser preview only.
+    This does not force the IP camera stream itself.
     """
     if frame is None or frame.size == 0:
         return frame
@@ -104,12 +113,7 @@ def resize_frame_for_live(frame, max_width=960):
 def save_latest_live_frame(frame):
     """
     Atomic live-frame save for the dashboard.
-
-    v19 improvement:
-    - Encode JPEG in memory first.
-    - Write to a temp file.
-    - Atomically replace latest_frame.jpg.
-    This prevents the browser/API from reading a half-written JPEG.
+    Prevents browser/API from reading a half-written JPEG.
     """
     live_path = "data/live/latest_frame.jpg"
     temp_path = "data/live/latest_frame_tmp.jpg"
@@ -138,10 +142,9 @@ def save_latest_live_frame(frame):
         print(f"Live frame save error: {error}")
 
 
-
 def write_camera_status(data):
     """
-    v20 camera health heartbeat.
+    Camera health heartbeat.
     The backend reads this file to know whether the active camera is alive.
     """
     try:
@@ -163,6 +166,129 @@ def write_camera_status(data):
         print(f"Camera status write error: {error}")
 
 
+def empty_tracking_summary():
+    return {
+        "session_unique_people": 0,
+        "active_tracks": 0,
+        "memory_tracks": 0,
+        "reidentified_people": 0,
+        "duplicates_prevented": 0,
+        "privacy_mode": "Anonymous body tracking"
+    }
+
+
+def safe_int(value, default=0):
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def clean_tracking_summary(raw_summary, visible_people=0):
+    """
+    v38.1 tracking summary cleanup.
+
+    Why this exists:
+    Some detector-side duplicate counters can rise every normal frame,
+    which makes duplicates_prevented look artificially high.
+
+    This function exposes a cleaner operational report:
+
+    - Current people = visible people now.
+    - Active tracks = anonymous IDs currently visible.
+    - Unique people seen = corrected session unique count.
+    - Re-identified = successful anonymous body re-identification.
+    - Duplicate counts prevented = real re-ID based prevention, not frame spam.
+
+    No face recognition is used.
+    """
+    if not isinstance(raw_summary, dict):
+        raw_summary = {}
+
+    visible_people = safe_int(visible_people, 0)
+
+    raw_unique_people = safe_int(raw_summary.get("session_unique_people", 0), 0)
+    active_tracks = safe_int(raw_summary.get("active_tracks", 0), 0)
+    memory_tracks = safe_int(raw_summary.get("memory_tracks", 0), 0)
+    reidentified_people = safe_int(raw_summary.get("reidentified_people", 0), 0)
+    raw_duplicates_prevented = safe_int(raw_summary.get("duplicates_prevented", 0), 0)
+
+    active_tracks = max(active_tracks, visible_people)
+    raw_unique_people = max(raw_unique_people, active_tracks)
+
+    corrected_unique_people = max(
+        active_tracks,
+        raw_unique_people - reidentified_people
+    )
+
+    corrected_duplicates_prevented = min(
+        raw_duplicates_prevented,
+        reidentified_people
+    )
+
+    corrected_duplicates_prevented = max(corrected_duplicates_prevented, 0)
+
+    return {
+        "session_unique_people": int(corrected_unique_people),
+        "active_tracks": int(active_tracks),
+        "memory_tracks": int(memory_tracks),
+        "reidentified_people": int(reidentified_people),
+        "duplicates_prevented": int(corrected_duplicates_prevented),
+        "privacy_mode": raw_summary.get("privacy_mode", "Anonymous body tracking")
+    }
+
+
+def get_detection_tracking_id(detection):
+    return detection.get(
+        "stable_tracking_id",
+        detection.get("tracking_id", None)
+    )
+
+
+def dedupe_detections_by_tracking_id(detections):
+    """
+    Prevents one anonymous tracking ID from appearing twice in the same frame.
+
+    This protects:
+    - people count
+    - zone count
+    - line crossing count
+    - occupancy calculations
+    """
+    clean_detections = []
+    seen_tracking_ids = set()
+
+    for detection in detections or []:
+        tracking_id = get_detection_tracking_id(detection)
+
+        if tracking_id is None or tracking_id == "N/A":
+            clean_detections.append(detection)
+            continue
+
+        if tracking_id in seen_tracking_ids:
+            continue
+
+        seen_tracking_ids.add(tracking_id)
+        clean_detections.append(detection)
+
+    return clean_detections
+
+
+def count_unique_people(detections):
+    tracking_ids = set()
+    unknown_count = 0
+
+    for detection in detections or []:
+        tracking_id = get_detection_tracking_id(detection)
+
+        if tracking_id is None or tracking_id == "N/A":
+            unknown_count += 1
+        else:
+            tracking_ids.add(tracking_id)
+
+    return len(tracking_ids) + unknown_count
+
+
 def mark_camera_offline(active_camera_profile, camera_source, reason):
     write_camera_status({
         "active_profile": active_camera_profile,
@@ -173,15 +299,39 @@ def mark_camera_offline(active_camera_profile, camera_source, reason):
         "fps": 0,
         "ai_fps": 0,
         "people": 0,
-        "density": "Unknown"
+        "zone_count": 0,
+        "occupancy": 0,
+        "density": "Unknown",
+        "tracking": empty_tracking_summary(),
+        "line_tracking": {
+            "entries": 0,
+            "exits": 0,
+            "duplicate_crossings_blocked": 0
+        }
     })
+
+
+def build_detector(frame_width):
+    return PeopleDetector(
+        MODEL_PATH,
+        CONFIDENCE_THRESHOLD,
+        frame_width,
+        enable_reid=ENABLE_ANONYMOUS_REID,
+        reid_memory_seconds=REID_MEMORY_SECONDS,
+        reid_max_center_distance=REID_MAX_CENTER_DISTANCE,
+        reid_min_match_score=REID_MIN_MATCH_SCORE,
+        reid_min_color_score=REID_MIN_COLOR_SCORE,
+        reid_iou_weight=REID_IOU_WEIGHT,
+        reid_distance_weight=REID_DISTANCE_WEIGHT,
+        reid_color_weight=REID_COLOR_WEIGHT,
+        reid_hist_bins=REID_HIST_BINS
+    )
 
 
 def main():
     os.makedirs("data/live", exist_ok=True)
 
     active_camera_profile = get_active_camera_profile()
-
     camera_profiles = get_camera_profiles()
 
     if active_camera_profile not in camera_profiles:
@@ -213,7 +363,7 @@ def main():
     headless_mode = os.getenv("CROWDVISION_HEADLESS", "0") == "1" or engine_mode == "web"
     low_resource_mode = os.getenv("CROWDVISION_LOW_RESOURCE", "0") == "1"
 
-    detector = PeopleDetector(MODEL_PATH, CONFIDENCE_THRESHOLD, frame_width)
+    detector = build_detector(frame_width)
     stats = SessionStats()
     occupancy_tracker = OccupancyTracker()
 
@@ -224,8 +374,17 @@ def main():
         blur_size=HEATMAP_BLUR_SIZE
     )
 
-    line_counter = LineCrossingCounter(counting_line["y"], LINE_CROSSING_COOLDOWN)
-    movement_analyzer = MovementAnalyzer(movement_threshold=MOVEMENT_THRESHOLD)
+    line_counter = LineCrossingCounter(
+        counting_line["y"],
+        LINE_CROSSING_COOLDOWN,
+        line_buffer=LINE_CROSSING_HYSTERESIS,
+        lost_ttl_frames=TRACK_LOST_TTL_FRAMES
+    )
+
+    movement_analyzer = MovementAnalyzer(
+        movement_threshold=MOVEMENT_THRESHOLD,
+        lost_ttl_frames=TRACK_LOST_TTL_FRAMES
+    )
 
     cap = open_camera_source(camera_source)
 
@@ -241,8 +400,10 @@ def main():
 
     camera_label = get_camera_source_label(camera_source)
 
-    print("CrowdVision AI v20.0 started.")
-    print("Feature: Enterprise Monitoring Upgrade")
+    print("CrowdVision AI v38.1 started.")
+    print("Feature: Anonymous Person Tracking Accuracy Fix")
+    print("Privacy: No face recognition. No identity database. Anonymous body/track memory only.")
+    print("Duplicate handling: Cleaned operational duplicate reporting enabled.")
     print(f"Active Profile: {active_camera_profile}")
     print(f"Camera Source: {camera_source}")
     print(f"Zones: {len(monitoring_zones)}")
@@ -253,6 +414,8 @@ def main():
     print(f"Recommended Mode: {performance_status['recommended_mode']}")
     print(f"Frame Width: {frame_width}")
     print(f"Process Every N Frames: {process_every_n_frames}")
+    print(f"Anonymous Re-ID: {ENABLE_ANONYMOUS_REID}")
+    print(f"Re-ID Memory Seconds: {REID_MEMORY_SECONDS}")
     print("Press q to quit only in desktop mode.")
 
     last_log_time = 0
@@ -266,11 +429,15 @@ def main():
     line_data = {"entries": 0, "exits": 0, "line_y": counting_line["y"]}
     movement_data = {"left": 0, "right": 0, "up": 0, "down": 0, "stationary": 0}
 
+    raw_tracking_summary = empty_tracking_summary()
+    tracking_summary = empty_tracking_summary()
+
     smart_data = {
         "visible_people": 0,
         "tracked_people": 0,
         "congestion_score": 0,
-        "congestion_level": "Low"
+        "congestion_level": "Low",
+        **tracking_summary
     }
 
     zone_analytics = []
@@ -280,7 +447,6 @@ def main():
         "congestion_score": 0,
         "congestion_level": "Low"
     }
-
 
     heatmap_enabled = ENABLE_HEATMAP and not (headless_mode and low_resource_mode)
     professional_ui_enabled = ENABLE_PROFESSIONAL_UI
@@ -294,14 +460,34 @@ def main():
             if restarted:
                 latest_detections = []
                 occupancy_tracker = OccupancyTracker()
-                line_counter = LineCrossingCounter(counting_line["y"], LINE_CROSSING_COOLDOWN)
+
+                line_counter = LineCrossingCounter(
+                    counting_line["y"],
+                    LINE_CROSSING_COOLDOWN,
+                    line_buffer=LINE_CROSSING_HYSTERESIS,
+                    lost_ttl_frames=TRACK_LOST_TTL_FRAMES
+                )
+
                 heatmap = CrowdHeatmap(
                     decay_rate=HEATMAP_DECAY_RATE,
                     radius=HEATMAP_RADIUS,
                     opacity=HEATMAP_OPACITY,
                     blur_size=HEATMAP_BLUR_SIZE
                 )
-                movement_analyzer = MovementAnalyzer(movement_threshold=MOVEMENT_THRESHOLD)
+
+                movement_analyzer = MovementAnalyzer(
+                    movement_threshold=MOVEMENT_THRESHOLD,
+                    lost_ttl_frames=TRACK_LOST_TTL_FRAMES
+                )
+
+                raw_tracking_summary = empty_tracking_summary()
+                tracking_summary = empty_tracking_summary()
+
+                try:
+                    detector.reset_tracking()
+                except Exception:
+                    pass
+
                 continue
 
             print("End of stream or unable to read frame.")
@@ -318,19 +504,28 @@ def main():
 
         if should_process_frame:
             latest_detections = detector.detect_and_track(frame)
+            raw_tracking_summary = detector.get_tracking_summary()
             ai_fps = stats.update_ai_fps()
         else:
             stats.add_skipped_frame()
             ai_fps = stats.get_ai_fps()
 
-        detections = latest_detections
-        person_count = len(detections)
+        detections = dedupe_detections_by_tracking_id(latest_detections)
+        person_count = count_unique_people(detections)
+
+        tracking_summary = clean_tracking_summary(
+            raw_tracking_summary,
+            visible_people=person_count
+        )
 
         if ENABLE_ZONE_MONITORING:
             zone_detections = filter_detections_inside_zone(
                 detections,
                 monitoring_zone
             )
+
+            zone_detections = dedupe_detections_by_tracking_id(zone_detections)
+            zone_count = count_unique_people(zone_detections)
 
             zone_analytics = analyze_zones(
                 detections,
@@ -342,6 +537,7 @@ def main():
             )
         else:
             zone_detections = detections
+            zone_count = person_count
             zone_analytics = []
             most_dangerous_zone = {
                 "name": "None",
@@ -350,7 +546,6 @@ def main():
                 "congestion_level": "Low"
             }
 
-        zone_count = len(zone_detections)
         occupancy_data = occupancy_tracker.update(zone_detections)
 
         update_history(
@@ -382,6 +577,9 @@ def main():
         active_tracking_ids = draw_detections(display_frame, detections)
         tracked_people = len(active_tracking_ids)
 
+        if tracked_people <= 0:
+            tracked_people = person_count
+
         congestion_score = calculate_congestion_score(
             zone_count,
             occupancy_data["occupancy"],
@@ -394,7 +592,8 @@ def main():
             "visible_people": person_count,
             "tracked_people": tracked_people,
             "congestion_score": congestion_score,
-            "congestion_level": congestion_level
+            "congestion_level": congestion_level,
+            **tracking_summary
         }
 
         if ENABLE_ZONE_MONITORING:
@@ -420,7 +619,13 @@ def main():
                 "occupancy": int(occupancy_data["occupancy"]),
                 "density": density_level,
                 "alert": alert_message,
-                "mode": resolved_performance_mode
+                "mode": resolved_performance_mode,
+                "tracking": tracking_summary,
+                "line_tracking": {
+                    "entries": int(line_data.get("entries", 0)),
+                    "exits": int(line_data.get("exits", 0)),
+                    "duplicate_crossings_blocked": int(line_data.get("duplicate_crossings_blocked", 0))
+                }
             })
 
         incident_data = analyze_incident(

@@ -459,3 +459,85 @@ timestamp,camera_profile,total_people,zone_count,occupancy,peak_occupancy,line_e
 2026-06-30 12:17:39,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
 2026-06-30 12:17:47,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
 2026-06-30 12:17:56,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-06-30 15:54:52,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-06-30 15:55:10,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-06-30 15:55:18,webcam,1,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-06-30 15:55:28,webcam,1,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-06-30 15:55:38,webcam,2,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-06-30 15:55:44,webcam,2,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-06-30 15:55:52,webcam,2,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-06-30 15:56:00,webcam,2,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-06-30 15:56:10,webcam,2,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-06-30 15:56:18,webcam,2,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-06-30 15:56:26,webcam,1,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 11:42:34,uploaded_video_20260629_095850,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 11:42:47,uploaded_video_20260629_095850,6,1,1,1,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,12,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 11:42:55,uploaded_video_20260629_095850,6,3,3,3,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,6,4,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 11:43:05,uploaded_video_20260629_095850,3,0,2,3,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,3,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 11:43:13,uploaded_video_20260629_095850,3,0,0,3,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,3,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 11:43:23,uploaded_video_20260629_095850,4,3,4,4,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,4,5,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 11:43:31,uploaded_video_20260629_095850,6,5,5,6,0,0,High,WARNING: High crowd density!,True,5,Main Monitoring Zone,Increase monitoring and prepare crowd-control response.,6,5,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 11:43:40,uploaded_video_20260629_095850,8,6,6,8,0,0,Critical,DANGER: Critical crowd density!,True,2,Main Monitoring Zone,Dispatch security immediately and redirect crowd flow.,9,5,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 11:43:50,uploaded_video_20260629_095850,6,4,7,8,0,0,High,WARNING: High crowd density!,True,3,Main Monitoring Zone,Increase monitoring and prepare crowd-control response.,6,7,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 11:43:57,uploaded_video_20260629_095850,7,3,5,8,0,2,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,7,4,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 11:44:06,uploaded_video_20260629_095850,6,4,7,8,0,2,High,WARNING: High crowd density!,True,0,Main Monitoring Zone,Increase monitoring and prepare crowd-control response.,7,7,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 13:10:06,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 13:10:20,webcam,1,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-01 13:10:28,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:14:41,webcam_20260702_145317,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:14:53,webcam_20260702_145317,2,1,1,1,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,4,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:15:02,webcam_20260702_145317,3,2,2,2,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,3,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:15:11,webcam_20260702_145317,1,1,1,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:15:20,webcam_20260702_145317,2,1,1,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:15:28,webcam_20260702_145317,1,1,1,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:15:36,webcam_20260702_145317,1,1,1,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:15:45,webcam_20260702_145317,1,1,1,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:15:53,webcam_20260702_145317,1,1,2,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:16:02,webcam_20260702_145317,1,1,2,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:16:10,webcam_20260702_145317,1,1,1,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:16:18,webcam_20260702_145317,2,2,2,2,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,2,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:16:26,webcam_20260702_145317,2,2,2,2,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,2,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:16:35,webcam_20260702_145317,2,2,2,2,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,2,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:16:44,webcam_20260702_145317,1,1,1,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:16:52,webcam_20260702_145317,1,1,1,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:17:01,webcam_20260702_145317,2,2,2,2,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,2,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:17:10,webcam_20260702_145317,2,2,2,2,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,2,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:17:18,webcam_20260702_145317,1,1,2,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:17:26,webcam_20260702_145317,2,2,2,2,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,2,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:17:34,webcam_20260702_145317,1,1,1,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:17:42,webcam_20260702_145317,2,1,1,2,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:17:51,webcam_20260702_145317,2,2,2,2,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,2,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:22:31,crowd_video,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:22:40,crowd_video,6,4,4,4,0,0,High,WARNING: High crowd density!,True,0,Table Area,Increase monitoring and prepare crowd-control response.,8,5,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:22:48,crowd_video,4,1,2,5,1,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,4,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:22:57,crowd_video,2,1,1,5,1,1,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:23:05,crowd_video,7,4,5,5,1,1,High,WARNING: High crowd density!,True,1,Table Area,Increase monitoring and prepare crowd-control response.,8,6,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:23:14,crowd_video,7,3,4,7,1,1,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,7,3,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:23:23,crowd_video,6,5,5,7,1,1,High,WARNING: High crowd density!,True,3,Table Area,Increase monitoring and prepare crowd-control response.,6,5,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:23:32,crowd_video,6,3,5,7,2,1,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,6,5,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:43:23,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:43:33,webcam,1,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:43:41,webcam,1,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:43:50,webcam,1,0,0,1,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 17:43:58,webcam,1,0,0,1,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:07:04,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:07:13,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:07:20,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:07:28,webcam,1,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:07:37,webcam,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:07:45,webcam,1,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:08:20,uploaded_video_20260629_095850,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:08:28,uploaded_video_20260629_095850,6,2,2,2,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,6,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:08:37,uploaded_video_20260629_095850,3,0,2,3,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,3,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:08:46,uploaded_video_20260629_095850,3,1,1,3,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,3,1,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:08:54,uploaded_video_20260629_095850,7,4,5,5,0,0,High,WARNING: High crowd density!,True,2,Main Monitoring Zone,Increase monitoring and prepare crowd-control response.,8,5,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:09:03,uploaded_video_20260629_095850,8,6,6,7,0,0,Critical,DANGER: Critical crowd density!,True,1,Main Monitoring Zone,Dispatch security immediately and redirect crowd flow.,9,6,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:09:12,uploaded_video_20260629_095850,6,3,7,7,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,6,8,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:09:20,uploaded_video_20260629_095850,4,3,6,7,0,2,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,3,7,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:11:54,uploaded_video_20260629_095850,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:12:02,uploaded_video_20260629_095850,6,2,2,2,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,8,3,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:12:11,uploaded_video_20260629_095850,4,1,2,3,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,4,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:12:19,uploaded_video_20260629_095850,2,0,0,3,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,2,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:12:29,uploaded_video_20260629_095850,7,4,5,5,0,0,High,WARNING: High crowd density!,True,1,Main Monitoring Zone,Increase monitoring and prepare crowd-control response.,8,6,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:12:37,uploaded_video_20260629_095850,8,6,6,7,0,0,Critical,DANGER: Critical crowd density!,True,1,Main Monitoring Zone,Dispatch security immediately and redirect crowd flow.,9,6,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-02 18:12:45,uploaded_video_20260629_095850,7,3,5,7,0,1,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,7,4,Stable,False,Normal,0,Normal,None,Monitor

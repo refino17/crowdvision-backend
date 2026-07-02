@@ -1,8 +1,11 @@
 class MovementAnalyzer:
-    def __init__(self, movement_threshold=5, history_size=6):
+    def __init__(self, movement_threshold=5, history_size=6, lost_ttl_frames=90):
         self.position_history = {}
+        self.last_seen_frame = {}
         self.movement_threshold = movement_threshold
         self.history_size = history_size
+        self.lost_ttl_frames = lost_ttl_frames
+        self.current_frame = 0
 
     def get_center_point(self, bbox):
         x1, y1, x2, y2 = bbox
@@ -12,7 +15,20 @@ class MovementAnalyzer:
 
         return center_x, center_y
 
+    def prune_old_tracks(self):
+        expired_ids = [
+            tracking_id
+            for tracking_id, last_seen in self.last_seen_frame.items()
+            if self.current_frame - last_seen > self.lost_ttl_frames
+        ]
+
+        for tracking_id in expired_ids:
+            self.position_history.pop(tracking_id, None)
+            self.last_seen_frame.pop(tracking_id, None)
+
     def analyze(self, detections):
+        self.current_frame += 1
+
         direction_counts = {
             "left": 0,
             "right": 0,
@@ -21,15 +37,13 @@ class MovementAnalyzer:
             "stationary": 0
         }
 
-        active_ids = set()
-
         for detection in detections:
-            tracking_id = detection["tracking_id"]
+            tracking_id = detection.get("stable_tracking_id", detection.get("tracking_id", "N/A"))
 
-            if tracking_id == "N/A":
+            if tracking_id == "N/A" or tracking_id is None:
                 continue
 
-            active_ids.add(tracking_id)
+            self.last_seen_frame[tracking_id] = self.current_frame
 
             current_position = self.get_center_point(detection["bbox"])
 
@@ -66,8 +80,5 @@ class MovementAnalyzer:
                 else:
                     direction_counts["up"] += 1
 
-        for tracking_id in list(self.position_history.keys()):
-            if tracking_id not in active_ids:
-                self.position_history.pop(tracking_id, None)
-
+        self.prune_old_tracks()
         return direction_counts

@@ -41,18 +41,21 @@ LIVE_JPEG_QUALITY = 72
 LIVE_PREVIEW_MAX_WIDTH = 960
 LIVE_CAMERA_TARGET_FPS = 15
 
-# v20 enterprise monitoring settings
+# Enterprise monitoring settings
 CAMERA_STATUS_FILE = "data/camera_status.json"
 NOTIFICATION_LIMIT = 20
 CAMERA_OFFLINE_AFTER_SECONDS = 20
 EVIDENCE_DIRS = ["data/evidence", "data/snapshots", "data/alerts"]
 
-
 VIDEO_LOOP = False
 
 ENABLE_ZONE_MONITORING = True
 ENABLE_LINE_CROSSING = True
-LINE_CROSSING_COOLDOWN = 20
+
+# Duplicate-safe line crossing.
+# Increased slightly so jitter around the line does not create fake crossings.
+LINE_CROSSING_COOLDOWN = 30
+LINE_CROSSING_HYSTERESIS = 14
 
 # Heatmap is beautiful but expensive on 4GB RAM systems.
 # Keep it False for smooth dashboard monitoring.
@@ -71,6 +74,25 @@ ENABLE_MULTI_ZONE_ANALYTICS = True
 
 ENABLE_PROFESSIONAL_UI = True
 SIDE_PANEL_WIDTH = 380
+
+# v38.1 anonymous tracking and duplicate-count prevention.
+# This is privacy-friendly tracking. It does not use face recognition.
+#
+# Important:
+# This improves re-identification stability when a person briefly disappears,
+# moves out of view, changes position, or returns to the camera view.
+ENABLE_ANONYMOUS_REID = True
+REID_MEMORY_SECONDS = 45
+REID_MAX_CENTER_DISTANCE = 320
+REID_MIN_MATCH_SCORE = 0.48
+REID_MIN_COLOR_SCORE = 0.14
+REID_IOU_WEIGHT = 0.15
+REID_DISTANCE_WEIGHT = 0.35
+REID_COLOR_WEIGHT = 0.50
+REID_HIST_BINS = 16
+
+# Keep track memory longer so webcam movement does not create a new person too quickly.
+TRACK_LOST_TTL_FRAMES = 300
 
 ACTIVE_CAMERA_PROFILE = "crowd_video"
 
@@ -254,6 +276,7 @@ def get_performance_status():
         "auto_enabled": selected_mode == "AUTO"
     }
 
+
 SOURCE_PROFILES_FILE = "data/source_profiles.json"
 ACTIVE_PROFILE_FILE = "data/active_camera_profile.txt"
 
@@ -384,4 +407,4 @@ def set_active_camera_profile(profile):
     return True
 
 
-WINDOW_NAME = "CrowdVision AI v19.0 - Smooth Monitoring Pipeline"
+WINDOW_NAME = "CrowdVision AI v38.1 - Anonymous Tracking Accuracy"

@@ -1,17 +1,28 @@
 {
-  "updated_at": "2026-06-30 12:17:57",
-  "updated_at_epoch": 1782821877.2759295,
-  "active_profile": "webcam",
-  "source": "0",
-  "online": true,
-  "status": "Online",
-  "reason": "Receiving frames",
-  "fps": 8.15,
-  "ai_fps": 0.35,
+  "updated_at": "2026-07-02 18:12:53",
+  "updated_at_epoch": 1783015973.4505672,
+  "active_profile": "uploaded_video_20260629_095850",
+  "source": "data/uploads/20260629_095850_test.mp4",
+  "online": false,
+  "status": "Offline",
+  "reason": "End of stream or unable to read frame",
+  "fps": 0,
+  "ai_fps": 0,
   "people": 0,
   "zone_count": 0,
   "occupancy": 0,
-  "density": "Low",
-  "alert": "SAFE: Crowd level is low.",
-  "mode": "LOW"
+  "density": "Unknown",
+  "tracking": {
+    "session_unique_people": 0,
+    "active_tracks": 0,
+    "memory_tracks": 0,
+    "reidentified_people": 0,
+    "duplicates_prevented": 0,
+    "privacy_mode": "Anonymous body tracking"
+  },
+  "line_tracking": {
+    "entries": 0,
+    "exits": 0,
+    "duplicate_crossings_blocked": 0
+  }
 }
