@@ -43,11 +43,32 @@ LIVE_CAMERA_TARGET_FPS = 15
 
 # Enterprise monitoring settings
 CAMERA_STATUS_FILE = "data/camera_status.json"
-NOTIFICATION_LIMIT = 20
+NOTIFICATION_LIMIT = 50
+NOTIFICATION_FILE = "data/notifications.json"
+NOTIFICATION_COOLDOWN_SECONDS = 20
 CAMERA_OFFLINE_AFTER_SECONDS = 20
 EVIDENCE_DIRS = ["data/evidence", "data/snapshots", "data/alerts"]
 
-VIDEO_LOOP = False
+# Optional future multi-camera edge worker telemetry.
+# This does not change your current desktop/web monitoring flow.
+EDGE_WORKER_STATUS_FILE = "data/edge_workers.json"
+ENABLE_EDGE_WORKER_TELEMETRY = True
+
+# Camera health / tamper intelligence.
+# These checks catch common CCTV problems such as covered lens, blackout,
+# blur, frozen frame, glare, and weak signal. No face recognition is used.
+ENABLE_CAMERA_HEALTH_INTELLIGENCE = True
+CAMERA_TAMPER_BLUR_THRESHOLD = 55.0
+CAMERA_TAMPER_DARK_THRESHOLD = 28.0
+CAMERA_TAMPER_BRIGHT_THRESHOLD = 238.0
+CAMERA_TAMPER_FROZEN_SECONDS = 8.0
+CAMERA_TAMPER_MIN_FRAME_CHANGE = 1.35
+CAMERA_TAMPER_WARMUP_FRAMES = 8
+CAMERA_TAMPER_ALERT_HOLD_SECONDS = 6.0
+CAMERA_TAMPER_SAVE_SNAPSHOT = True
+
+
+VIDEO_LOOP = True
 
 ENABLE_ZONE_MONITORING = True
 ENABLE_LINE_CROSSING = True
@@ -407,4 +428,4 @@ def set_active_camera_profile(profile):
     return True
 
 
-WINDOW_NAME = "CrowdVision AI v38.1 - Anonymous Tracking Accuracy"
+WINDOW_NAME = "CrowdVision AI v41 - Camera Health Intelligence"

@@ -1,0 +1,22 @@
+{
+  "edge_id": "gate_01",
+  "name": "Gate 01 Camera",
+  "source": "0",
+  "api": "http://127.0.0.1:8000",
+  "detect": true,
+  "model": "yolov8n.pt",
+  "loop": false,
+  "timeout": 15.0,
+  "interval": 5.0,
+  "process_every": 10,
+  "location": "Gate 01",
+  "display": false,
+  "preview": true,
+  "preview_interval": 1.0,
+  "preview_width": 640,
+  "preview_quality": 68,
+  "pid": 3900,
+  "started_at": "2026-07-04 10:21:00",
+  "started_at_epoch": 1783160460.6850138,
+  "managed_by_api": true
+}

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, PlainTextResponse
@@ -43,20 +43,38 @@ EVENTS_FILE = "data/events.csv"
 LIVE_FRAME_PATH = "data/live/latest_frame.jpg"
 REPORTS_DIR = "data/reports"
 UPLOADS_DIR = "data/uploads"
+NOTIFICATION_FILE = "data/notifications.json"
+EDGE_TELEMETRY_FILE = "data/edge_telemetry.json"
+EDGE_WORKER_OFFLINE_AFTER_SECONDS = 30
+EDGE_TELEMETRY_LIMIT = 500
+EDGE_PID_DIR = "data/edge/pids"
+EDGE_LOG_DIR = "data/edge/logs"
+EDGE_META_DIR = "data/edge/meta"
+EDGE_PREVIEW_DIR = "data/edge/previews"
+EDGE_PREVIEW_MAX_BYTES = 2_500_000
+EDGE_PREVIEW_STALE_AFTER_SECONDS = 5
 
 ENGINE_PROCESS = None
 PROJECT_ROOT = os.getcwd()
 MAIN_SCRIPT = os.path.join(PROJECT_ROOT, "app", "main.py")
+EDGE_WORKER_SCRIPT = os.path.join(PROJECT_ROOT, "app", "edge_worker.py")
+EDGE_WORKER_PROCESSES = {}
 ENGINE_PID_FILE = "data/engine.pid"
 ENGINE_LOG_FILE = "data/engine.log"
 
 os.makedirs("data/live", exist_ok=True)
 os.makedirs(REPORTS_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
+os.makedirs("data/edge", exist_ok=True)
+os.makedirs(EDGE_PID_DIR, exist_ok=True)
+os.makedirs(EDGE_LOG_DIR, exist_ok=True)
+os.makedirs(EDGE_META_DIR, exist_ok=True)
+os.makedirs(EDGE_PREVIEW_DIR, exist_ok=True)
 
 app.mount("/live", StaticFiles(directory="data/live"), name="live")
 app.mount("/reports", StaticFiles(directory=REPORTS_DIR), name="reports")
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+app.mount("/edge-previews", StaticFiles(directory=EDGE_PREVIEW_DIR), name="edge_previews")
 
 for _evidence_dir in ["data/evidence", "data/snapshots", "data/alerts"]:
     os.makedirs(_evidence_dir, exist_ok=True)
@@ -134,6 +152,67 @@ def normalize_tracking_summary(status):
     return normalized
 
 
+def default_camera_health():
+    return {
+        "enabled": True,
+        "status": "Waiting",
+        "severity": "Info",
+        "tamper_detected": False,
+        "tamper_type": "None",
+        "message": "Waiting for camera frames.",
+        "brightness": 0,
+        "blur_score": 0,
+        "frame_change": 0,
+        "frozen_seconds": 0,
+        "covered_lens": False,
+        "too_dark": False,
+        "too_bright": False,
+        "blurry": False,
+        "frozen_frame": False,
+        "signal_quality": "Waiting",
+        "last_alert_at": None
+    }
+
+
+def normalize_camera_health(status):
+    if not status or not isinstance(status, dict):
+        return default_camera_health()
+
+    camera_health = status.get("camera_health")
+
+    if not isinstance(camera_health, dict):
+        return default_camera_health()
+
+    normalized = default_camera_health()
+
+    for key in normalized.keys():
+        if key in camera_health:
+            normalized[key] = camera_health.get(key)
+
+    numeric_keys = ["brightness", "blur_score", "frame_change", "frozen_seconds"]
+
+    for key in numeric_keys:
+        try:
+            normalized[key] = round(float(normalized.get(key, 0)), 2)
+        except Exception:
+            normalized[key] = 0
+
+    bool_keys = [
+        "enabled",
+        "tamper_detected",
+        "covered_lens",
+        "too_dark",
+        "too_bright",
+        "blurry",
+        "frozen_frame"
+    ]
+
+    for key in bool_keys:
+        normalized[key] = bool(normalized.get(key, False))
+
+    return normalized
+
+
 def read_camera_status_file():
     if not os.path.exists(CAMERA_STATUS_FILE):
         return None
@@ -175,7 +254,15 @@ def mark_camera_status_stopped(reason="Monitoring engine stopped by operator"):
         "fps": 0,
         "ai_fps": 0,
         "mode": performance.get("resolved_mode", "LOW"),
-        "tracking": normalize_tracking_summary(previous_status)
+        "tracking": normalize_tracking_summary(previous_status),
+        "camera_health": {
+            **normalize_camera_health(previous_status),
+            "status": "Stopped",
+            "severity": "Info",
+            "tamper_detected": False,
+            "tamper_type": "None",
+            "message": reason
+        }
     }
 
     write_camera_status_file(stopped_status)
@@ -325,6 +412,451 @@ def stop_pid(pid):
             os.kill(pid, signal.SIGKILL)
         except Exception:
             pass
+
+
+def safe_edge_id(edge_id):
+    text = str(edge_id or "").strip().lower()
+    safe = "".join(ch if ch.isalnum() or ch in ["_", "-"] else "_" for ch in text).strip("_")
+    return safe or "edge_worker"
+
+
+def edge_pid_file(edge_id):
+    return os.path.join(EDGE_PID_DIR, f"{safe_edge_id(edge_id)}.pid")
+
+
+def edge_meta_file(edge_id):
+    return os.path.join(EDGE_META_DIR, f"{safe_edge_id(edge_id)}.json")
+
+
+def edge_log_file(edge_id):
+    return os.path.join(EDGE_LOG_DIR, f"{safe_edge_id(edge_id)}.log")
+
+
+def edge_preview_file(edge_id):
+    return os.path.join(EDGE_PREVIEW_DIR, f"{safe_edge_id(edge_id)}.jpg")
+
+
+def get_edge_preview_info(edge_id, online=False):
+    safe_id = safe_edge_id(edge_id)
+    preview_path = edge_preview_file(safe_id)
+
+    if not os.path.exists(preview_path):
+        return {
+            "preview_available": False,
+            "preview_url": None,
+            "preview_age_seconds": None,
+            "preview_live": False
+        }
+
+    try:
+        age = round(max(0.0, time.time() - os.path.getmtime(preview_path)), 2)
+    except Exception:
+        age = None
+
+    return {
+        "preview_available": True,
+        "preview_url": f"/edge-previews/{safe_id}.jpg",
+        "preview_age_seconds": age,
+        "preview_live": bool(online and age is not None and age <= EDGE_PREVIEW_STALE_AFTER_SECONDS)
+    }
+
+
+def save_edge_pid(edge_id, pid):
+    os.makedirs(EDGE_PID_DIR, exist_ok=True)
+    with open(edge_pid_file(edge_id), "w") as file:
+        file.write(str(pid))
+
+
+def get_saved_edge_pid(edge_id):
+    path = edge_pid_file(edge_id)
+
+    if not os.path.exists(path):
+        return None
+
+    try:
+        with open(path, "r") as file:
+            pid = int(file.read().strip())
+
+        return pid
+    except Exception:
+        return None
+
+
+def clear_edge_pid(edge_id):
+    path = edge_pid_file(edge_id)
+
+    if os.path.exists(path):
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+
+
+def save_edge_meta(edge_id, meta):
+    try:
+        os.makedirs(EDGE_META_DIR, exist_ok=True)
+        with open(edge_meta_file(edge_id), "w") as file:
+            json.dump(meta, file, indent=2)
+    except Exception as error:
+        print(f"Unable to save edge meta: {error}")
+
+
+def read_edge_meta(edge_id):
+    path = edge_meta_file(edge_id)
+
+    if not os.path.exists(path):
+        return {}
+
+    try:
+        with open(path, "r") as file:
+            data = json.load(file)
+
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def list_managed_edge_ids():
+    ids = set()
+
+    if os.path.exists(EDGE_PID_DIR):
+        for filename in os.listdir(EDGE_PID_DIR):
+            if filename.endswith(".pid"):
+                ids.add(filename[:-4])
+
+    if os.path.exists(EDGE_META_DIR):
+        for filename in os.listdir(EDGE_META_DIR):
+            if filename.endswith(".json"):
+                ids.add(filename[:-5])
+
+    for edge_id in EDGE_WORKER_PROCESSES.keys():
+        ids.add(safe_edge_id(edge_id))
+
+    return sorted(ids)
+
+
+def get_edge_worker_pid(edge_id):
+    safe_id = safe_edge_id(edge_id)
+
+    process = EDGE_WORKER_PROCESSES.get(safe_id)
+
+    if process is not None and process.poll() is None:
+        return process.pid
+
+    saved_pid = get_saved_edge_pid(safe_id)
+
+    if saved_pid and is_pid_running(saved_pid):
+        return saved_pid
+
+    clear_edge_pid(safe_id)
+    EDGE_WORKER_PROCESSES.pop(safe_id, None)
+    return None
+
+
+def is_edge_worker_running(edge_id):
+    return get_edge_worker_pid(edge_id) is not None
+
+
+def stop_edge_worker_process(edge_id):
+    safe_id = safe_edge_id(edge_id)
+    meta = read_edge_meta(safe_id)
+    camera_name = str(meta.get("name") or safe_id.replace("_", " ").title())
+    pid = get_edge_worker_pid(safe_id)
+
+    if not pid:
+        EDGE_WORKER_PROCESSES.pop(safe_id, None)
+        clear_edge_pid(safe_id)
+        return False
+
+    stop_pid(pid)
+    EDGE_WORKER_PROCESSES.pop(safe_id, None)
+    clear_edge_pid(safe_id)
+
+    append_edge_notification({
+        "category": "edge_control",
+        "severity": "normal",
+        "title": "Remote Camera Disconnected",
+        "message": f"{camera_name} is no longer connected to the command center.",
+        "source": camera_name,
+        "action": "Monitor the remaining connected cameras.",
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "epoch": time.time(),
+        "dedupe_key": f"camera:control:stopped:{safe_id}",
+        "metadata": {"edge_id": safe_id}
+    })
+
+    return True
+
+
+def ensure_local_source_available(source, requested_edge_id=None):
+    source_text = str(source).strip()
+
+    if source_text != "0":
+        return
+
+    if is_engine_running():
+        active_profile = get_active_camera_profile()
+        active_profile_data = load_camera_profiles().get(active_profile, {})
+        active_source = str(active_profile_data.get("source", "")).strip()
+
+        if active_source == "0":
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "The laptop camera is already being used by Main Monitoring. "
+                    "Stop Main Monitoring first, then start the Laptop Camera here. "
+                    "One physical camera can only be used by one monitoring session at a time."
+                )
+            )
+
+    requested_id = safe_edge_id(requested_edge_id or "edge_worker")
+
+    for edge_id in list_managed_edge_ids():
+        if safe_edge_id(edge_id) == requested_id:
+            continue
+
+        meta = read_edge_meta(edge_id)
+        camera_name = str(meta.get("name") or safe_edge_id(edge_id).replace("_", " ").title())
+        if str(meta.get("source", "")).strip() == "0" and is_edge_worker_running(edge_id):
+            raise HTTPException(
+                status_code=409,
+                detail=f"The laptop camera is already being used by {camera_name}. Stop that camera first."
+            )
+
+
+def build_edge_command(
+    edge_id,
+    name,
+    source,
+    api_url="http://127.0.0.1:8000",
+    detect=False,
+    model="yolov8n.pt",
+    loop=True,
+    timeout=15,
+    interval=10,
+    process_every=10,
+    location="Unassigned",
+    display=False,
+    preview=True,
+    preview_interval=1.0,
+    preview_width=640,
+    preview_quality=68
+):
+    command = [
+        sys.executable,
+        EDGE_WORKER_SCRIPT,
+        "--edge-id", safe_edge_id(edge_id),
+        "--name", str(name or edge_id),
+        "--source", str(source),
+        "--api", str(api_url or "http://127.0.0.1:8000"),
+        "--timeout", str(timeout),
+        "--interval", str(interval),
+        "--process-every", str(process_every),
+        "--location", str(location or "Unassigned"),
+        "--preview-interval", str(preview_interval),
+        "--preview-width", str(preview_width),
+        "--preview-quality", str(preview_quality),
+    ]
+
+    if not preview:
+        command.append("--no-preview")
+
+    if detect:
+        command.extend(["--detect", "--model", str(model or "yolov8n.pt")])
+
+    if loop:
+        command.append("--loop")
+
+    if display:
+        command.append("--display")
+
+    return command
+
+
+def start_edge_worker_process(config):
+    if not os.path.exists(EDGE_WORKER_SCRIPT):
+        raise HTTPException(status_code=404, detail="The remote camera service is unavailable. Contact the system administrator.")
+
+    edge_id = safe_edge_id(config.get("edge_id") or "edge_worker")
+    name = str(config.get("name") or edge_id)
+    source = str(config.get("source") or "0")
+
+    ensure_local_source_available(source, requested_edge_id=edge_id)
+
+    if is_edge_worker_running(edge_id):
+        return {
+            "message": "Camera is already connected",
+            "edge_id": edge_id,
+            "running": True,
+            "pid": get_edge_worker_pid(edge_id),
+            "config": read_edge_meta(edge_id)
+        }
+
+    detect = bool(config.get("detect", False))
+    model = str(config.get("model") or "yolov8n.pt")
+    loop = bool(config.get("loop", True))
+    timeout = float(config.get("timeout", 15))
+    interval = float(config.get("interval", 10))
+    process_every = int(config.get("process_every", 10))
+    location = str(config.get("location") or "Unassigned")
+    display = bool(config.get("display", False))
+    preview = bool(config.get("preview", True))
+    preview_interval = max(0.5, float(config.get("preview_interval", 1.0)))
+    preview_width = max(320, min(int(config.get("preview_width", 640)), 1280))
+    preview_quality = max(40, min(int(config.get("preview_quality", 68)), 90))
+    api_url = str(config.get("api") or "http://127.0.0.1:8000")
+
+    command = build_edge_command(
+        edge_id=edge_id,
+        name=name,
+        source=source,
+        api_url=api_url,
+        detect=detect,
+        model=model,
+        loop=loop,
+        timeout=timeout,
+        interval=interval,
+        process_every=process_every,
+        location=location,
+        display=display,
+        preview=preview,
+        preview_interval=preview_interval,
+        preview_width=preview_width,
+        preview_quality=preview_quality
+    )
+
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+    env["OMP_NUM_THREADS"] = "1"
+    env["OPENBLAS_NUM_THREADS"] = "1"
+    env["MKL_NUM_THREADS"] = "1"
+    env["NUMEXPR_NUM_THREADS"] = "1"
+
+    os.makedirs(EDGE_LOG_DIR, exist_ok=True)
+    log_file = open(edge_log_file(edge_id), "a")
+
+    process = subprocess.Popen(
+        command,
+        cwd=PROJECT_ROOT,
+        stdout=log_file,
+        stderr=log_file,
+        start_new_session=True,
+        env=env
+    )
+
+    EDGE_WORKER_PROCESSES[edge_id] = process
+    save_edge_pid(edge_id, process.pid)
+
+    meta = {
+        "edge_id": edge_id,
+        "name": name,
+        "source": source,
+        "api": api_url,
+        "detect": detect,
+        "model": model if detect else "disabled",
+        "loop": loop,
+        "timeout": timeout,
+        "interval": interval,
+        "process_every": process_every,
+        "location": location,
+        "display": display,
+        "preview": preview,
+        "preview_interval": preview_interval,
+        "preview_width": preview_width,
+        "preview_quality": preview_quality,
+        "pid": process.pid,
+        "started_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "started_at_epoch": time.time(),
+        "managed_by_api": True
+    }
+    save_edge_meta(edge_id, meta)
+
+    append_edge_notification({
+        "category": "edge_control",
+        "severity": "normal",
+        "title": "Remote Camera Connected",
+        "message": f"{name} is now connected to the command center.",
+        "source": name,
+        "action": "Monitor the camera view, crowd activity, and camera health.",
+        "time": meta["started_at"],
+        "epoch": meta["started_at_epoch"],
+        "dedupe_key": f"camera:control:started:{edge_id}",
+        "metadata": {"edge_id": edge_id, "pid": process.pid, "detect": detect}
+    })
+
+    return {
+        "message": "Camera connected. The live view will appear in the dashboard within a few seconds.",
+        "edge_id": edge_id,
+        "running": True,
+        "pid": process.pid,
+        "config": meta
+    }
+
+
+def build_managed_edge_placeholder(edge_id):
+    meta = read_edge_meta(edge_id)
+    running = is_edge_worker_running(edge_id)
+
+    if not meta and not running:
+        return None
+
+    now = time.time()
+    started_epoch = safe_epoch_from_time(meta.get("started_at_epoch"))
+    age = round(now - started_epoch, 2) if started_epoch else None
+
+    return {
+        "edge_id": safe_edge_id(edge_id),
+        "name": meta.get("name", safe_edge_id(edge_id)),
+        "source": str(meta.get("source", "Unknown")),
+        "source_type": "Remote Camera",
+        "location": meta.get("location", "Unassigned"),
+        "online": False,
+        "status": "Starting" if running else "Stopped",
+        "people": 0,
+        "total_people": 0,
+        "zone_count": 0,
+        "occupancy": 0,
+        "density": "Waiting" if running else "Offline",
+        "fps": 0,
+        "ai_fps": 0,
+        "camera_health": default_camera_health(),
+        "tracking": default_tracking_summary(),
+        "privacy_mode": "Anonymous monitoring",
+        "message": "Camera connection is starting; waiting for the first status update." if running else "Camera is offline.",
+        "metadata": {
+            "detect_enabled": bool(meta.get("detect", False)),
+            "model": meta.get("model", "disabled"),
+            "edge_version": "v40-control",
+            "process_every": meta.get("process_every", 10),
+            "managed_by_api": True
+        },
+        "received_at": meta.get("started_at"),
+        "received_at_epoch": started_epoch,
+        "updated_at": meta.get("started_at"),
+        "updated_at_epoch": started_epoch,
+        "age_seconds": age,
+        "health": "Starting" if running else "Stopped",
+        "offline_after_seconds": EDGE_WORKER_OFFLINE_AFTER_SECONDS,
+        "process_running": running,
+        "process_pid": get_edge_worker_pid(edge_id),
+        "managed_by_api": True,
+        **get_edge_preview_info(edge_id, online=running)
+    }
+
+
+def merge_managed_edge_workers(workers):
+    existing_ids = {safe_edge_id(worker.get("edge_id")) for worker in workers if isinstance(worker, dict)}
+
+    for edge_id in list_managed_edge_ids():
+        if edge_id in existing_ids:
+            continue
+
+        placeholder = build_managed_edge_placeholder(edge_id)
+        if placeholder:
+            workers.append(placeholder)
+
+    workers.sort(key=lambda item: safe_epoch_from_time(item.get("received_at_epoch")) if isinstance(item, dict) else 0, reverse=True)
+    return workers
 
 
 @app.get("/api/system/performance")
@@ -1045,6 +1577,7 @@ def get_camera_health():
     )
 
     active_tracking = normalize_tracking_summary(status)
+    active_camera_health = normalize_camera_health(status)
     cameras = []
 
     for key, profile in profiles.items():
@@ -1070,6 +1603,7 @@ def get_camera_health():
                 "fps": status.get("fps", 0) if status else 0,
                 "ai_fps": status.get("ai_fps", 0) if status else 0,
                 "reason": status.get("reason", "") if status else "",
+                "camera_health": active_camera_health,
                 "tracking": active_tracking
             })
         else:
@@ -1090,6 +1624,7 @@ def get_camera_health():
                 "fps": 0,
                 "ai_fps": 0,
                 "reason": "Not active",
+                "camera_health": default_camera_health(),
                 "tracking": default_tracking_summary()
             })
 
@@ -1100,18 +1635,188 @@ def get_camera_health():
         "stream_live": active_online,
         "latest_frame_age_seconds": frame_age,
         "live_frame_url": preview_url,
+        "camera_health": active_camera_health,
         "tracking": active_tracking,
         "status": status,
         "cameras": cameras
     }
 
 
-@app.get("/api/notifications")
-def get_notifications():
+def read_notification_file():
+    """
+    Read stored professional notifications written by app/alerts.py.
+
+    Your monitoring engine can now create persistent alerts for:
+    - high / critical crowd density
+    - active incidents
+    - anomalies
+    - camera integrity / tamper warnings
+    - engine status events
+
+    This function is intentionally safe. If the file does not exist yet,
+    the API still works and simply returns the live fallback notifications.
+    """
+    if not os.path.exists(NOTIFICATION_FILE):
+        return []
+
+    try:
+        with open(NOTIFICATION_FILE, "r") as file:
+            data = json.load(file)
+
+        if isinstance(data, list):
+            return data
+
+        return []
+    except Exception as error:
+        print(f"Unable to read notification file: {error}")
+        return []
+
+
+def safe_epoch_from_time(value):
+    if value in [None, "", 0]:
+        return 0.0
+
+    try:
+        return float(value)
+    except Exception:
+        pass
+
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%d %H:%M:%S").timestamp()
+    except Exception:
+        return 0.0
+
+
+def operator_friendly_notification_text(title, message, action, source, metadata=None):
+    """Translate older technical camera-network wording for operator-facing screens."""
+    title = str(title or "CrowdVision Notification")
+    message = str(message or "System event recorded.")
+    action = str(action or "Monitor")
+    source = str(source or "CrowdVision AI")
+    metadata = metadata if isinstance(metadata, dict) else {}
+
+    exact_titles = {
+        "Edge Worker Started": "Remote Camera Connected",
+        "Edge Worker Stopped": "Remote Camera Disconnected",
+        "Edge Worker Alert": "Remote Camera Alert",
+    }
+    title = exact_titles.get(title, title)
+
+    if title.startswith("Edge Camera Integrity Alert:"):
+        title = title.replace("Edge Camera Integrity Alert:", "Camera Integrity Alert:", 1)
+
+    if title.startswith("Edge Worker ") and title.endswith(" Density"):
+        density = title.replace("Edge Worker ", "", 1).replace(" Density", "").strip()
+        title = f"{density} Crowd Level Detected"
+
+    message_replacements = {
+        "Edge worker ": "Remote camera ",
+        "edge worker ": "remote camera ",
+        "edge workers": "remote cameras",
+        "Edge workers": "Remote cameras",
+        "edge telemetry": "camera status",
+        "Edge telemetry": "Camera status",
+        "edge camera": "remote camera",
+        "Edge camera": "Remote camera",
+        "edge nodes": "connected cameras",
+        "Edge nodes": "Connected cameras",
+    }
+    for old_text, new_text in message_replacements.items():
+        message = message.replace(old_text, new_text)
+        action = action.replace(old_text, new_text)
+
+    edge_id = str(metadata.get("edge_id") or "").strip()
+    if edge_id and source in {edge_id, safe_edge_id(edge_id)}:
+        meta = read_edge_meta(edge_id)
+        camera_name = str(meta.get("name") or "").strip()
+        if camera_name:
+            source = camera_name
+
+    return title, message, action, source
+
+
+def normalize_notification_record(notification, fallback_index=0):
+    if not isinstance(notification, dict):
+        notification = {}
+
+    category = str(
+        notification.get("category") or
+        notification.get("type") or
+        "system"
+    ).lower()
+
+    severity = str(notification.get("severity") or "normal").lower()
+
+    # Keep the frontend classes predictable.
+    severity_aliases = {
+        "info": "normal",
+        "success": "normal",
+        "healthy": "normal",
+        "medium": "warning",
+        "high": "warning",
+        "critical": "critical",
+        "danger": "critical",
+        "warning": "warning",
+        "normal": "normal"
+    }
+    severity = severity_aliases.get(severity, severity)
+
+    time_text = str(
+        notification.get("time") or
+        notification.get("created") or
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    )
+
+    epoch = safe_epoch_from_time(notification.get("epoch"))
+    if epoch <= 0:
+        epoch = safe_epoch_from_time(time_text)
+
+    title = str(notification.get("title") or "CrowdVision Notification")
+    message = str(notification.get("message") or "System event recorded.")
+    source = str(notification.get("source") or get_active_camera_profile() or "CrowdVision AI")
+    action = str(notification.get("action") or "Monitor")
+    metadata = notification.get("metadata") if isinstance(notification.get("metadata"), dict) else {}
+
+    title, message, action, source = operator_friendly_notification_text(
+        title=title,
+        message=message,
+        action=action,
+        source=source,
+        metadata=metadata
+    )
+
+    dedupe_key = str(
+        notification.get("dedupe_key") or
+        f"{category}:{title}:{message}:{source}"
+    )
+
+    return {
+        "id": str(notification.get("id") or f"notification_{fallback_index}_{int(epoch)}"),
+        "type": category,
+        "category": category,
+        "severity": severity,
+        "title": title,
+        "message": message,
+        "source": source,
+        "action": action,
+        "time": time_text,
+        "epoch": epoch,
+        "dedupe_key": dedupe_key,
+        "metadata": metadata
+    }
+
+
+def build_live_notifications():
+    """
+    Live fallback notifications from the latest CSV/status files.
+    These make the dashboard useful even before data/notifications.json exists.
+    """
     notifications = []
     latest_event = get_latest_event_record()
     camera_health = get_camera_health()
     active_camera = None
+    now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_epoch = time.time()
 
     for camera in camera_health.get("cameras", []):
         if camera.get("active"):
@@ -1121,52 +1826,661 @@ def get_notifications():
     if not camera_health.get("engine_running"):
         notifications.append({
             "type": "engine",
+            "category": "engine",
             "severity": "warning",
-            "title": "AI Engine Stopped",
-            "message": "Monitoring engine is not currently running.",
-            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "title": "Monitoring Paused",
+            "message": "The AI monitoring engine is not currently running.",
+            "source": get_active_camera_profile(),
+            "action": "Start monitoring when ready.",
+            "time": now_text,
+            "epoch": now_epoch,
+            "dedupe_key": "live:engine:stopped"
         })
 
     if active_camera and not active_camera.get("online") and camera_health.get("engine_running"):
         notifications.append({
             "type": "camera",
+            "category": "camera",
             "severity": "critical",
-            "title": "Camera Health Warning",
+            "title": "Camera Feed Interrupted",
             "message": f"{active_camera.get('name')} is not producing fresh frames.",
-            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "source": active_camera.get("name") or get_active_camera_profile(),
+            "action": "Check camera source, cable, stream URL, or video file.",
+            "time": now_text,
+            "epoch": now_epoch,
+            "dedupe_key": f"live:camera:offline:{active_camera.get('key')}"
+        })
+
+    active_camera_integrity = active_camera.get("camera_health", {}) if active_camera else {}
+    if active_camera_integrity.get("tamper_detected"):
+        severity = "critical" if active_camera_integrity.get("severity") == "Critical" else "warning"
+        tamper_type = active_camera_integrity.get("tamper_type", "Camera Integrity Warning")
+        notifications.append({
+            "type": "camera_health",
+            "category": "camera_health",
+            "severity": severity,
+            "title": f"Camera Integrity Alert: {tamper_type}",
+            "message": active_camera_integrity.get("message", "Camera signal integrity warning."),
+            "source": active_camera.get("name") if active_camera else get_active_camera_profile(),
+            "action": "Inspect the camera lens, lighting, signal, cable, or network.",
+            "time": active_camera_integrity.get("last_alert_at") or now_text,
+            "epoch": safe_epoch_from_time(active_camera_integrity.get("last_alert_at")) or now_epoch,
+            "dedupe_key": f"live:camera_health:{tamper_type}"
         })
 
     if latest_event:
         density = str(latest_event.get("density_level", "Unknown"))
+        event_time = latest_event.get("timestamp", now_text)
+        event_epoch = safe_epoch_from_time(event_time) or now_epoch
+        event_source = latest_event.get("camera_profile", get_active_camera_profile())
 
         if density in ["High", "Critical"]:
             notifications.append({
-                "type": "crowd",
+                "type": "density",
+                "category": "density",
                 "severity": "critical" if density == "Critical" else "warning",
                 "title": f"{density} Crowd Density",
                 "message": latest_event.get("alert_message", "Crowd alert detected."),
-                "time": latest_event.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                "source": event_source,
+                "action": latest_event.get("recommendation", "Increase monitoring and prepare response."),
+                "time": event_time,
+                "epoch": event_epoch,
+                "dedupe_key": f"live:density:{event_source}:{density}:{event_time}"
             })
 
         if str(latest_event.get("incident_active", "False")) == "True":
             notifications.append({
                 "type": "incident",
+                "category": "incident",
                 "severity": "critical",
-                "title": "Active Incident",
-                "message": f"Danger zone: {latest_event.get('danger_zone', 'Unknown')}. {latest_event.get('recommendation', 'Monitor')}",
-                "time": latest_event.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                "title": "Active Crowd Incident",
+                "message": (
+                    f"Danger zone: {latest_event.get('danger_zone', 'Unknown')}. "
+                    f"{latest_event.get('recommendation', 'Monitor')}"
+                ),
+                "source": event_source,
+                "action": latest_event.get("recommendation", "Respond to active incident."),
+                "time": event_time,
+                "epoch": event_epoch + 0.01,
+                "dedupe_key": f"live:incident:{event_source}:{latest_event.get('danger_zone', 'Unknown')}:{event_time}"
             })
 
         if str(latest_event.get("anomaly_detected", "False")) == "True":
+            anomaly_severity = str(latest_event.get("anomaly_severity", "warning")).lower()
+            if anomaly_severity == "high":
+                anomaly_severity = "warning"
+
             notifications.append({
                 "type": "anomaly",
-                "severity": str(latest_event.get("anomaly_severity", "warning")).lower(),
+                "category": "anomaly",
+                "severity": anomaly_severity,
                 "title": f"Anomaly: {latest_event.get('anomaly_type', 'Detected')}",
-                "message": f"Score: {latest_event.get('anomaly_score', 0)}%. Zone: {latest_event.get('anomaly_zone', 'Unknown')}",
-                "time": latest_event.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                "message": (
+                    f"Score: {latest_event.get('anomaly_score', 0)}%. "
+                    f"Zone: {latest_event.get('anomaly_zone', 'Unknown')}"
+                ),
+                "source": event_source,
+                "action": latest_event.get("anomaly_recommendation", "Investigate anomaly."),
+                "time": event_time,
+                "epoch": event_epoch + 0.02,
+                "dedupe_key": f"live:anomaly:{event_source}:{latest_event.get('anomaly_type', 'Detected')}:{event_time}"
             })
 
-    return {"notifications": notifications[:NOTIFICATION_LIMIT]}
+    return notifications
+
+
+def merge_notifications(stored_notifications, live_notifications, limit):
+    merged = []
+    seen = set()
+
+    combined = []
+    combined.extend(stored_notifications or [])
+    combined.extend(live_notifications or [])
+
+    normalized_items = [
+        normalize_notification_record(item, index)
+        for index, item in enumerate(combined)
+    ]
+
+    normalized_items.sort(
+        key=lambda item: float(item.get("epoch", 0)),
+        reverse=True
+    )
+
+    for item in normalized_items:
+        key = item.get("dedupe_key") or item.get("id")
+        if key in seen:
+            continue
+
+        seen.add(key)
+        merged.append(item)
+
+        if len(merged) >= int(limit):
+            break
+
+    return merged
+
+
+@app.get("/api/notifications")
+def get_notifications():
+    stored_notifications = read_notification_file()
+    live_notifications = build_live_notifications()
+
+    return {
+        "notifications": merge_notifications(
+            stored_notifications=stored_notifications,
+            live_notifications=live_notifications,
+            limit=NOTIFICATION_LIMIT
+        )
+    }
+
+
+# -----------------------------------------------------------------------------
+# Optional Multi-Camera Edge Worker Architecture
+# -----------------------------------------------------------------------------
+
+def read_edge_telemetry_file():
+    """
+    Read telemetry sent by optional edge workers.
+
+    Edge workers are separate camera processors that can run on another laptop,
+    mini PC, CCTV machine, or remote site. They send lightweight metadata to the
+    central CrowdVision API instead of forcing every camera through one process.
+    """
+    if not os.path.exists(EDGE_TELEMETRY_FILE):
+        return []
+
+    try:
+        with open(EDGE_TELEMETRY_FILE, "r") as file:
+            data = json.load(file)
+
+        if isinstance(data, list):
+            return data
+
+        return []
+    except Exception as error:
+        print(f"Unable to read edge telemetry file: {error}")
+        return []
+
+
+def write_edge_telemetry_file(records):
+    try:
+        os.makedirs(os.path.dirname(EDGE_TELEMETRY_FILE), exist_ok=True)
+        temp_path = f"{EDGE_TELEMETRY_FILE}.tmp"
+
+        with open(temp_path, "w") as file:
+            json.dump(records[-EDGE_TELEMETRY_LIMIT:], file, indent=2)
+
+        os.replace(temp_path, EDGE_TELEMETRY_FILE)
+        return True
+    except Exception as error:
+        print(f"Unable to write edge telemetry file: {error}")
+        return False
+
+
+def append_edge_notification(notification):
+    """
+    Add important edge-worker events into the same notification store used by
+    the dashboard. This keeps the frontend unchanged.
+    """
+    if not isinstance(notification, dict):
+        return False
+
+    try:
+        os.makedirs(os.path.dirname(NOTIFICATION_FILE), exist_ok=True)
+        existing = read_notification_file()
+
+        existing.append({
+            "id": notification.get("id") or f"edge_{int(time.time())}",
+            "category": notification.get("category", "edge"),
+            "type": notification.get("type", notification.get("category", "edge")),
+            "severity": notification.get("severity", "normal"),
+            "title": notification.get("title", "Remote Camera Alert"),
+            "message": notification.get("message", "Remote camera event recorded."),
+            "source": notification.get("source", "Remote Camera"),
+            "action": notification.get("action", "Monitor camera status."),
+            "time": notification.get("time", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            "epoch": notification.get("epoch", time.time()),
+            "dedupe_key": notification.get("dedupe_key", f"edge:{notification.get('title', 'event')}"),
+            "metadata": notification.get("metadata", {}) if isinstance(notification.get("metadata", {}), dict) else {}
+        })
+
+        # Keep recent records only. NotificationCenter needs the newest and most useful items.
+        existing = sorted(
+            existing,
+            key=lambda item: safe_epoch_from_time(item.get("epoch")) or safe_epoch_from_time(item.get("time")),
+            reverse=True
+        )[:200]
+
+        temp_path = f"{NOTIFICATION_FILE}.tmp"
+        with open(temp_path, "w") as file:
+            json.dump(existing, file, indent=2)
+
+        os.replace(temp_path, NOTIFICATION_FILE)
+        return True
+    except Exception as error:
+        print(f"Unable to append edge notification: {error}")
+        return False
+
+
+def normalize_edge_health(raw_health):
+    if not isinstance(raw_health, dict):
+        return default_camera_health()
+
+    normalized = default_camera_health()
+
+    for key in normalized.keys():
+        if key in raw_health:
+            normalized[key] = raw_health.get(key)
+
+    for key in ["brightness", "blur_score", "frame_change", "frozen_seconds"]:
+        try:
+            normalized[key] = round(float(normalized.get(key, 0)), 2)
+        except Exception:
+            normalized[key] = 0
+
+    for key in ["enabled", "tamper_detected", "covered_lens", "too_dark", "too_bright", "blurry", "frozen_frame"]:
+        normalized[key] = bool(normalized.get(key, False))
+
+    return normalized
+
+
+def normalize_edge_record(payload):
+    if not isinstance(payload, dict):
+        payload = {}
+
+    edge_id = str(payload.get("edge_id") or payload.get("id") or "edge_unknown").strip()
+    if not edge_id:
+        edge_id = "edge_unknown"
+
+    now = time.time()
+    now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    people = payload.get("people", payload.get("total_people", 0))
+    try:
+        people = int(float(people))
+    except Exception:
+        people = 0
+
+    zone_count = payload.get("zone_count", 0)
+    try:
+        zone_count = int(float(zone_count))
+    except Exception:
+        zone_count = 0
+
+    occupancy = payload.get("occupancy", people)
+    try:
+        occupancy = int(float(occupancy))
+    except Exception:
+        occupancy = people
+
+    fps = payload.get("fps", 0)
+    ai_fps = payload.get("ai_fps", 0)
+
+    try:
+        fps = round(float(fps), 2)
+    except Exception:
+        fps = 0
+
+    try:
+        ai_fps = round(float(ai_fps), 2)
+    except Exception:
+        ai_fps = 0
+
+    health = normalize_edge_health(payload.get("camera_health", {}))
+
+    record = {
+        "edge_id": edge_id,
+        "name": str(payload.get("name") or payload.get("edge_name") or edge_id),
+        "source": str(payload.get("source") or "Unknown"),
+        "source_type": str(payload.get("source_type") or "edge_camera"),
+        "location": str(payload.get("location") or "Unassigned"),
+        "online": bool(payload.get("online", True)),
+        "status": str(payload.get("status") or "Online"),
+        "people": people,
+        "total_people": people,
+        "zone_count": zone_count,
+        "occupancy": occupancy,
+        "density": str(payload.get("density") or payload.get("density_level") or "Unknown"),
+        "fps": fps,
+        "ai_fps": ai_fps,
+        "camera_health": health,
+        "tracking": payload.get("tracking") if isinstance(payload.get("tracking"), dict) else default_tracking_summary(),
+        "privacy_mode": str(payload.get("privacy_mode") or "Anonymous monitoring"),
+        "message": str(payload.get("message") or health.get("message") or "Camera status received."),
+        "metadata": payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {},
+        "received_at": now_text,
+        "received_at_epoch": now,
+        "updated_at": str(payload.get("updated_at") or payload.get("timestamp") or now_text),
+        "updated_at_epoch": safe_epoch_from_time(payload.get("updated_at_epoch")) or safe_epoch_from_time(payload.get("timestamp_epoch")) or now,
+    }
+
+    return record
+
+
+def latest_edge_records():
+    records = read_edge_telemetry_file()
+    latest = {}
+
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+
+        edge_id = str(record.get("edge_id") or "edge_unknown")
+        previous = latest.get(edge_id)
+
+        if not previous:
+            latest[edge_id] = record
+            continue
+
+        current_epoch = safe_epoch_from_time(record.get("received_at_epoch"))
+        previous_epoch = safe_epoch_from_time(previous.get("received_at_epoch"))
+
+        if current_epoch >= previous_epoch:
+            latest[edge_id] = record
+
+    now = time.time()
+    workers = []
+
+    for record in latest.values():
+        received_epoch = safe_epoch_from_time(record.get("received_at_epoch")) or 0
+        age = round(now - received_epoch, 2) if received_epoch else None
+        online = bool(record.get("online")) and age is not None and age <= EDGE_WORKER_OFFLINE_AFTER_SECONDS
+
+        edge_id = safe_edge_id(record.get("edge_id"))
+        process_running = is_edge_worker_running(edge_id)
+        process_pid = get_edge_worker_pid(edge_id)
+        meta = read_edge_meta(edge_id)
+        managed_by_api = bool(meta.get("managed_by_api", False))
+
+        if managed_by_api and not process_running:
+            online = False
+
+        workers.append({
+            **record,
+            "age_seconds": age,
+            "online": online,
+            "health": "Online" if online else ("Process Running" if process_running else "Offline"),
+            "offline_after_seconds": EDGE_WORKER_OFFLINE_AFTER_SECONDS,
+            "process_running": process_running,
+            "process_pid": process_pid,
+            "managed_by_api": managed_by_api,
+            "control": meta,
+            **get_edge_preview_info(edge_id, online=online)
+        })
+
+    workers.sort(key=lambda item: safe_epoch_from_time(item.get("received_at_epoch")), reverse=True)
+    return workers
+
+
+@app.post("/api/edge/telemetry")
+def receive_edge_telemetry(payload: dict = Body(...)):
+    """
+    Receive lightweight metadata from an optional edge worker.
+
+    This endpoint does not replace the existing monitoring engine. It lets you
+    add remote cameras later without changing your current dashboard workflow.
+    """
+    record = normalize_edge_record(payload)
+    records = read_edge_telemetry_file()
+    records.append(record)
+
+    if not write_edge_telemetry_file(records):
+        raise HTTPException(status_code=500, detail="Unable to save edge telemetry")
+
+    density = str(record.get("density", "Unknown"))
+    health = record.get("camera_health", {})
+    edge_name = record.get("name", record.get("edge_id"))
+
+    if health.get("tamper_detected"):
+        tamper_type = health.get("tamper_type", "Camera Integrity Warning")
+        append_edge_notification({
+            "category": "edge_camera_health",
+            "severity": "critical" if health.get("severity") == "Critical" else "warning",
+            "title": f"Camera Integrity Alert: {tamper_type}",
+            "message": health.get("message", "Camera integrity warning detected."),
+            "source": edge_name,
+            "action": "Inspect the camera lens, lighting, cable, or network connection.",
+            "time": record.get("received_at"),
+            "epoch": record.get("received_at_epoch"),
+            "dedupe_key": f"edge:tamper:{record.get('edge_id')}:{tamper_type}",
+            "metadata": {"edge_id": record.get("edge_id"), "source": record.get("source")}
+        })
+
+    if density in ["High", "Critical"]:
+        append_edge_notification({
+            "category": "edge_density",
+            "severity": "critical" if density == "Critical" else "warning",
+            "title": f"{density} Crowd Level Detected",
+            "message": f"{edge_name} detected {record.get('people', 0)} people and a {density.lower()} crowd level.",
+            "source": edge_name,
+            "action": "Review the camera view and prepare a response if crowd pressure continues.",
+            "time": record.get("received_at"),
+            "epoch": record.get("received_at_epoch"),
+            "dedupe_key": f"edge:density:{record.get('edge_id')}:{density}",
+            "metadata": {"edge_id": record.get("edge_id"), "people": record.get("people", 0)}
+        })
+
+    return {
+        "message": "Camera status received",
+        "edge_id": record.get("edge_id"),
+        "received_at": record.get("received_at"),
+        "online": record.get("online"),
+        "density": record.get("density"),
+        "people": record.get("people")
+    }
+
+
+
+
+@app.post("/api/edge/preview/{edge_id}")
+async def receive_edge_preview(edge_id: str, file: UploadFile = File(...)):
+    """Receive a lightweight JPEG preview from a local or remote edge worker."""
+    safe_id = safe_edge_id(edge_id)
+    content = await file.read()
+
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty edge preview")
+
+    if len(content) > EDGE_PREVIEW_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Edge preview is too large")
+
+    if not content.startswith(b"\xff\xd8"):
+        raise HTTPException(status_code=400, detail="Edge preview must be a JPEG image")
+
+    os.makedirs(EDGE_PREVIEW_DIR, exist_ok=True)
+    preview_path = edge_preview_file(safe_id)
+    temp_path = f"{preview_path}.tmp"
+
+    try:
+        with open(temp_path, "wb") as preview_file:
+            preview_file.write(content)
+
+        os.replace(temp_path, preview_path)
+    except Exception as error:
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+
+        raise HTTPException(status_code=500, detail=f"Unable to save edge preview: {error}")
+
+    return {
+        "message": "Camera preview received",
+        "edge_id": safe_id,
+        **get_edge_preview_info(safe_id, online=True)
+    }
+
+
+@app.get("/api/edge/processes")
+def get_edge_processes():
+    processes = []
+
+    for edge_id in list_managed_edge_ids():
+        meta = read_edge_meta(edge_id)
+        pid = get_edge_worker_pid(edge_id)
+        processes.append({
+            "edge_id": safe_edge_id(edge_id),
+            "running": pid is not None,
+            "pid": pid,
+            "name": meta.get("name", safe_edge_id(edge_id)),
+            "source": meta.get("source", "Unknown"),
+            "detect": bool(meta.get("detect", False)),
+            "model": meta.get("model", "disabled"),
+            "started_at": meta.get("started_at"),
+            "log_file": edge_log_file(edge_id),
+        })
+
+    return {
+        "processes": processes,
+        "running": len([process for process in processes if process.get("running")])
+    }
+
+
+@app.post("/api/edge/workers/start-demo")
+def start_demo_edge_worker(payload: dict = Body(default={})):
+    config = {
+        "edge_id": payload.get("edge_id", "demo_video_01"),
+        "name": payload.get("name", "Demo Edge Video"),
+        "source": payload.get("source", "data/sample_videos/test.mp4"),
+        "api": payload.get("api", "http://127.0.0.1:8000"),
+        "detect": bool(payload.get("detect", True)),
+        "model": payload.get("model", "yolov8n.pt"),
+        "loop": bool(payload.get("loop", True)),
+        "timeout": payload.get("timeout", 15),
+        "interval": payload.get("interval", 10),
+        "process_every": payload.get("process_every", 10),
+        "location": payload.get("location", "Demo Video Source"),
+        "display": bool(payload.get("display", False)),
+        "preview": bool(payload.get("preview", True)),
+        "preview_interval": payload.get("preview_interval", 1.0),
+        "preview_width": payload.get("preview_width", 640),
+        "preview_quality": payload.get("preview_quality", 68),
+    }
+
+    return start_edge_worker_process(config)
+
+
+@app.post("/api/edge/workers/start-webcam")
+def start_webcam_edge_worker(payload: dict = Body(default={})):
+    config = {
+        "edge_id": payload.get("edge_id", "gate_01"),
+        "name": payload.get("name", "Gate 01 Camera"),
+        "source": payload.get("source", "0"),
+        "api": payload.get("api", "http://127.0.0.1:8000"),
+        "detect": bool(payload.get("detect", False)),
+        "model": payload.get("model", "yolov8n.pt"),
+        "loop": bool(payload.get("loop", False)),
+        "timeout": payload.get("timeout", 15),
+        "interval": payload.get("interval", 8),
+        "process_every": payload.get("process_every", 10),
+        "location": payload.get("location", "Gate 01"),
+        "display": bool(payload.get("display", False)),
+        "preview": bool(payload.get("preview", True)),
+        "preview_interval": payload.get("preview_interval", 1.0),
+        "preview_width": payload.get("preview_width", 640),
+        "preview_quality": payload.get("preview_quality", 68),
+    }
+
+    return start_edge_worker_process(config)
+
+
+@app.post("/api/edge/workers/start")
+def start_custom_edge_worker(payload: dict = Body(default={})):
+    required = ["edge_id", "name", "source"]
+
+    for field in required:
+        if not payload.get(field):
+            raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+
+    config = {
+        "edge_id": payload.get("edge_id"),
+        "name": payload.get("name"),
+        "source": payload.get("source"),
+        "api": payload.get("api", "http://127.0.0.1:8000"),
+        "detect": bool(payload.get("detect", False)),
+        "model": payload.get("model", "yolov8n.pt"),
+        "loop": bool(payload.get("loop", True)),
+        "timeout": payload.get("timeout", 15),
+        "interval": payload.get("interval", 10),
+        "process_every": payload.get("process_every", 10),
+        "location": payload.get("location", "Unassigned"),
+        "display": bool(payload.get("display", False)),
+        "preview": bool(payload.get("preview", True)),
+        "preview_interval": payload.get("preview_interval", 1.0),
+        "preview_width": payload.get("preview_width", 640),
+        "preview_quality": payload.get("preview_quality", 68),
+    }
+
+    return start_edge_worker_process(config)
+
+
+@app.post("/api/edge/workers/{edge_id}/stop")
+def stop_edge_worker_endpoint(edge_id: str):
+    stopped = stop_edge_worker_process(edge_id)
+
+    return {
+        "message": "Camera disconnected" if stopped else "Camera was already offline",
+        "edge_id": safe_edge_id(edge_id),
+        "running": is_edge_worker_running(edge_id),
+        "stopped": stopped
+    }
+
+
+@app.post("/api/edge/workers/stop-all")
+def stop_all_edge_workers():
+    stopped = []
+
+    for edge_id in list_managed_edge_ids():
+        if stop_edge_worker_process(edge_id):
+            stopped.append(safe_edge_id(edge_id))
+
+    return {
+        "message": "All dashboard-managed cameras stopped",
+        "stopped": stopped,
+        "count": len(stopped)
+    }
+
+@app.get("/api/edge/status")
+def get_edge_status():
+    workers = merge_managed_edge_workers(latest_edge_records())
+
+    return {
+        "enabled": True,
+        "total_workers": len(workers),
+        "online_workers": len([worker for worker in workers if worker.get("online")]),
+        "offline_workers": len([worker for worker in workers if not worker.get("online")]),
+        "offline_after_seconds": EDGE_WORKER_OFFLINE_AFTER_SECONDS,
+        "workers": workers
+    }
+
+
+@app.get("/api/edge/telemetry")
+def get_edge_telemetry(limit: int = 100):
+    try:
+        limit = max(1, min(int(limit), EDGE_TELEMETRY_LIMIT))
+    except Exception:
+        limit = 100
+
+    records = read_edge_telemetry_file()
+    records = sorted(
+        records,
+        key=lambda item: safe_epoch_from_time(item.get("received_at_epoch")) if isinstance(item, dict) else 0,
+        reverse=True
+    )
+
+    return {
+        "telemetry": records[:limit],
+        "count": len(records[:limit]),
+        "total_saved": len(records)
+    }
+
+
+@app.delete("/api/edge/telemetry")
+def clear_edge_telemetry():
+    write_edge_telemetry_file([])
+    return {"message": "Camera status history cleared"}
 
 
 @app.get("/api/evidence")

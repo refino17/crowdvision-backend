@@ -27,6 +27,15 @@ from config import (
     LIVE_PREVIEW_MAX_WIDTH,
     LIVE_CAMERA_TARGET_FPS,
     CAMERA_STATUS_FILE,
+    ENABLE_CAMERA_HEALTH_INTELLIGENCE,
+    CAMERA_TAMPER_BLUR_THRESHOLD,
+    CAMERA_TAMPER_DARK_THRESHOLD,
+    CAMERA_TAMPER_BRIGHT_THRESHOLD,
+    CAMERA_TAMPER_FROZEN_SECONDS,
+    CAMERA_TAMPER_MIN_FRAME_CHANGE,
+    CAMERA_TAMPER_WARMUP_FRAMES,
+    CAMERA_TAMPER_ALERT_HOLD_SECONDS,
+    CAMERA_TAMPER_SAVE_SNAPSHOT,
     VIDEO_LOOP,
     ENABLE_ZONE_MONITORING,
     ENABLE_LINE_CROSSING,
@@ -57,11 +66,18 @@ from config import (
     get_camera_profiles
 )
 
-from camera import open_camera_source, get_camera_source_label, video_file_exists, restart_video_if_needed
+from camera import open_camera_source, get_camera_source_label, video_file_exists, restart_video_if_needed, CameraHealthAnalyzer
 from detector import PeopleDetector
 from statistics import SessionStats
 from density import get_density_level
-from alerts import get_alert_message
+from alerts import (
+    get_alert_message,
+    record_density_notification,
+    record_incident_notification,
+    record_anomaly_notification,
+    record_camera_health_notification,
+    record_engine_notification,
+)
 from logger import save_event
 from evidence import save_alert_snapshot
 from display import (
@@ -88,7 +104,7 @@ from predictor import (
     risk_trend
 )
 from anomaly import analyze_anomaly
-from report_generator import generate_incident_report, generate_anomaly_report
+from report_generator import generate_incident_report, generate_anomaly_report, generate_camera_health_report
 
 
 def resize_frame_for_live(frame, max_width=960):
@@ -174,6 +190,29 @@ def empty_tracking_summary():
         "reidentified_people": 0,
         "duplicates_prevented": 0,
         "privacy_mode": "Anonymous body tracking"
+    }
+
+
+def empty_camera_health():
+    return {
+        "enabled": bool(ENABLE_CAMERA_HEALTH_INTELLIGENCE),
+        "status": "Waiting",
+        "severity": "Info",
+        "tamper_detected": False,
+        "tamper_type": "None",
+        "message": "Waiting for camera frames.",
+        "brightness": 0,
+        "blur_score": 0,
+        "frame_change": 0,
+        "frozen_seconds": 0,
+        "covered_lens": False,
+        "too_dark": False,
+        "too_bright": False,
+        "blurry": False,
+        "frozen_frame": False,
+        "signal_quality": "Waiting",
+        "last_alert_at": None,
+        "alert_ready": False
     }
 
 
@@ -290,6 +329,28 @@ def count_unique_people(detections):
 
 
 def mark_camera_offline(active_camera_profile, camera_source, reason):
+    offline_health = {
+        **empty_camera_health(),
+        "status": "Offline",
+        "severity": "Critical",
+        "tamper_detected": True,
+        "tamper_type": "No Signal",
+        "message": reason,
+        "signal_quality": "No Signal",
+        "alert_ready": True
+    }
+
+    try:
+        record_engine_notification(
+            "Camera Source Offline",
+            f"{active_camera_profile} is offline. Reason: {reason}",
+            severity="critical",
+            source=str(camera_source)
+        )
+        record_camera_health_notification(active_camera_profile, offline_health)
+    except Exception as error:
+        print(f"Notification write error: {error}")
+
     write_camera_status({
         "active_profile": active_camera_profile,
         "source": str(camera_source),
@@ -303,6 +364,7 @@ def mark_camera_offline(active_camera_profile, camera_source, reason):
         "occupancy": 0,
         "density": "Unknown",
         "tracking": empty_tracking_summary(),
+        "camera_health": offline_health,
         "line_tracking": {
             "entries": 0,
             "exits": 0,
@@ -400,10 +462,21 @@ def main():
 
     camera_label = get_camera_source_label(camera_source)
 
-    print("CrowdVision AI v38.1 started.")
-    print("Feature: Anonymous Person Tracking Accuracy Fix")
+    camera_health_analyzer = CameraHealthAnalyzer(
+        blur_threshold=CAMERA_TAMPER_BLUR_THRESHOLD,
+        dark_threshold=CAMERA_TAMPER_DARK_THRESHOLD,
+        bright_threshold=CAMERA_TAMPER_BRIGHT_THRESHOLD,
+        frozen_seconds=CAMERA_TAMPER_FROZEN_SECONDS,
+        min_frame_change=CAMERA_TAMPER_MIN_FRAME_CHANGE,
+        warmup_frames=CAMERA_TAMPER_WARMUP_FRAMES,
+        alert_hold_seconds=CAMERA_TAMPER_ALERT_HOLD_SECONDS
+    )
+
+    print("CrowdVision AI v42 started.")
+    print("Feature: Notification Engine + Camera Health Intelligence + Anonymous Tracking")
     print("Privacy: No face recognition. No identity database. Anonymous body/track memory only.")
     print("Duplicate handling: Cleaned operational duplicate reporting enabled.")
+    print("Camera health: Tamper, blur, blackout, glare, and frozen-frame detection enabled.")
     print(f"Active Profile: {active_camera_profile}")
     print(f"Camera Source: {camera_source}")
     print(f"Zones: {len(monitoring_zones)}")
@@ -418,10 +491,21 @@ def main():
     print(f"Re-ID Memory Seconds: {REID_MEMORY_SECONDS}")
     print("Press q to quit only in desktop mode.")
 
+    try:
+        record_engine_notification(
+            "Monitoring Engine Started",
+            f"CrowdVision AI started on profile {active_camera_profile} using {camera_label} in {resolved_performance_mode} mode.",
+            severity="normal",
+            source=active_camera_profile
+        )
+    except Exception as error:
+        print(f"Notification write error: {error}")
+
     last_log_time = 0
     last_capture_time = 0
     last_incident_report_time = 0
     last_anomaly_report_time = 0
+    last_camera_health_report_time = 0
     frame_counter = 0
     latest_detections = []
 
@@ -431,6 +515,7 @@ def main():
 
     raw_tracking_summary = empty_tracking_summary()
     tracking_summary = empty_tracking_summary()
+    camera_health_data = empty_camera_health()
 
     smart_data = {
         "visible_people": 0,
@@ -488,6 +573,13 @@ def main():
                 except Exception:
                     pass
 
+                try:
+                    camera_health_analyzer.reset()
+                except Exception:
+                    pass
+
+                camera_health_data = empty_camera_health()
+
                 continue
 
             print("End of stream or unable to read frame.")
@@ -496,6 +588,18 @@ def main():
 
         frame_counter += 1
         current_time = time.time()
+
+        if ENABLE_CAMERA_HEALTH_INTELLIGENCE:
+            camera_health_data = camera_health_analyzer.update(frame, current_time)
+        else:
+            camera_health_data = {
+                **empty_camera_health(),
+                "enabled": False,
+                "status": "Disabled",
+                "severity": "Info",
+                "message": "Camera health intelligence is disabled.",
+                "signal_quality": "Disabled"
+            }
 
         display_fps = stats.calculate_display_fps()
         runtime = stats.get_runtime_seconds()
@@ -620,6 +724,7 @@ def main():
                 "density": density_level,
                 "alert": alert_message,
                 "mode": resolved_performance_mode,
+                "camera_health": camera_health_data,
                 "tracking": tracking_summary,
                 "line_tracking": {
                     "entries": int(line_data.get("entries", 0)),
@@ -641,6 +746,31 @@ def main():
             density_level,
             most_dangerous_zone["name"]
         )
+
+        try:
+            record_density_notification(
+                density_level,
+                active_camera_profile,
+                zone_count,
+                occupancy_data["occupancy"],
+                most_dangerous_zone["name"],
+                alert_message
+            )
+            record_incident_notification(
+                active_camera_profile,
+                density_level,
+                incident_data
+            )
+            record_anomaly_notification(
+                active_camera_profile,
+                anomaly_data
+            )
+            record_camera_health_notification(
+                active_camera_profile,
+                camera_health_data
+            )
+        except Exception as error:
+            print(f"Notification write error: {error}")
 
         if current_time - last_log_time >= LOG_INTERVAL:
             save_event(
@@ -699,11 +829,36 @@ def main():
                 print(f"Anomaly report generated: {anomaly_report}")
                 last_anomaly_report_time = current_time
 
+        if (
+            camera_health_data.get("tamper_detected") and
+            camera_health_data.get("severity") in ["Warning", "Critical"]
+        ):
+            if current_time - last_camera_health_report_time >= ALERT_CAPTURE_INTERVAL:
+                camera_report = generate_camera_health_report(
+                    active_camera_profile,
+                    camera_health_data
+                )
+                print(f"Camera health report generated: {camera_report}")
+                last_camera_health_report_time = current_time
+
+        if (
+            CAMERA_TAMPER_SAVE_SNAPSHOT and
+            camera_health_data.get("tamper_detected") and
+            camera_health_data.get("severity") == "Critical"
+        ):
+            if current_time - last_capture_time >= ALERT_CAPTURE_INTERVAL:
+                file_path = save_alert_snapshot(display_frame, "camera_tamper", prefix="tamper_snapshot")
+                if file_path:
+                    stats.add_alert_snapshot()
+                    print(f"Camera tamper evidence saved: {file_path}")
+                last_capture_time = current_time
+
         if density_level in ["High", "Critical"]:
             if current_time - last_capture_time >= ALERT_CAPTURE_INTERVAL:
                 file_path = save_alert_snapshot(display_frame, density_level)
-                stats.add_alert_snapshot()
-                print(f"Evidence saved: {file_path}")
+                if file_path:
+                    stats.add_alert_snapshot()
+                    print(f"Evidence saved: {file_path}")
                 last_capture_time = current_time
 
         output_frame = display_frame
@@ -731,7 +886,8 @@ def main():
                 camera_label,
                 active_camera_profile,
                 resolved_performance_mode,
-                SIDE_PANEL_WIDTH
+                SIDE_PANEL_WIDTH,
+                camera_health_data
             )
 
         if frame_counter % LIVE_FRAME_SAVE_INTERVAL == 0:

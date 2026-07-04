@@ -141,7 +141,8 @@ def create_professional_dashboard_panel(
     camera_label,
     camera_profile,
     performance_mode,
-    side_panel_width
+    side_panel_width,
+    camera_health=None
 ):
     height = frame.shape[0]
     panel = np.zeros((height, side_panel_width, 3), dtype=np.uint8)
@@ -243,6 +244,26 @@ def create_professional_dashboard_panel(
 
     write("Density", density_level, density_color)
     write(alert_message, color=density_color, scale=0.37, gap=24)
+
+    camera_health = camera_health or {}
+    camera_health_status = camera_health.get("status", "Unknown")
+    camera_health_severity = camera_health.get("severity", "Info")
+    camera_health_tamper = camera_health.get("tamper_type", "None")
+    camera_health_quality = camera_health.get("signal_quality", "Unknown")
+
+    if camera_health_severity == "Critical":
+        health_color = (0, 0, 255)
+    elif camera_health_severity == "Warning":
+        health_color = (0, 165, 255)
+    else:
+        health_color = (0, 255, 0)
+
+    write("Camera Health", color=(0, 255, 255), scale=0.50, gap=25)
+    write("Status", camera_health_status, health_color, scale=0.40)
+    write("Signal Quality", camera_health_quality, health_color, scale=0.38)
+    write("Tamper", camera_health_tamper, health_color, scale=0.36)
+    write("Brightness", camera_health.get("brightness", 0), (200, 200, 200), scale=0.38)
+    write("Blur Score", camera_health.get("blur_score", 0), (200, 200, 200), scale=0.38)
 
     write("System", color=(255, 255, 255), scale=0.50, gap=24)
     write("FPS AI/Display", f"{ai_fps:.2f}/{display_fps:.2f}", (255, 255, 255), scale=0.40)
