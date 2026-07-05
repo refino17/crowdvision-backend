@@ -101,6 +101,106 @@ def load_events():
     return df.fillna(0)
 
 
+def as_bool(value):
+    """Convert CSV / JSON boolean-like values without truthiness mistakes."""
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"true", "1", "yes", "on"}
+
+
+def event_epoch(value):
+    """Return a Unix timestamp for CrowdVision event timestamps."""
+    if value in [None, "", 0]:
+        return 0.0
+
+    try:
+        return float(value)
+    except Exception:
+        pass
+
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%d %H:%M:%S").timestamp()
+    except Exception:
+        return 0.0
+
+
+def get_runtime_context(max_event_age_seconds=45):
+    """
+    Separate live state from historical records.
+
+    A CSV row is considered current only when:
+    - the monitoring engine is running,
+    - camera_status.json is fresh and online,
+    - the latest CSV event is recent enough.
+
+    This prevents old incidents/anomalies from appearing ACTIVE after monitoring stops.
+    """
+    status = read_camera_status_file() or {}
+    running = is_engine_running()
+    now = time.time()
+
+    try:
+        status_epoch = float(status.get("updated_at_epoch", 0) or 0)
+    except Exception:
+        status_epoch = 0.0
+
+    status_age = round(now - status_epoch, 2) if status_epoch else None
+    status_fresh = bool(
+        running
+        and status.get("online")
+        and status_age is not None
+        and status_age <= CAMERA_OFFLINE_AFTER_SECONDS
+    )
+
+    latest_event = get_latest_event_record()
+    latest_event_age = None
+    event_fresh = False
+
+    if latest_event:
+        latest_event_epoch = event_epoch(latest_event.get("timestamp"))
+        latest_event_age = round(now - latest_event_epoch, 2) if latest_event_epoch else None
+        event_fresh = bool(
+            status_fresh
+            and latest_event_age is not None
+            and latest_event_age <= max_event_age_seconds
+        )
+
+    return {
+        "running": running,
+        "status": status,
+        "status_fresh": status_fresh,
+        "status_age_seconds": status_age,
+        "latest_event": latest_event,
+        "latest_event_fresh": event_fresh,
+        "latest_event_age_seconds": latest_event_age,
+        "current_event": latest_event if event_fresh else None,
+    }
+
+
+def get_last_recorded_incident():
+    df = load_events()
+    if df.empty or "incident_active" not in df.columns:
+        return None
+
+    incidents_df = df[df["incident_active"].astype(str).str.lower() == "true"]
+    if incidents_df.empty:
+        return None
+
+    return incidents_df.tail(1).to_dict(orient="records")[0]
+
+
+def get_last_recorded_anomaly():
+    df = load_events()
+    if df.empty or "anomaly_detected" not in df.columns:
+        return None
+
+    anomalies_df = df[df["anomaly_detected"].astype(str).str.lower() == "true"]
+    if anomalies_df.empty:
+        return None
+
+    return anomalies_df.tail(1).to_dict(orient="records")[0]
+
+
 def default_tracking_summary():
     return {
         "session_unique_people": 0,
@@ -1043,6 +1143,38 @@ def get_live_image():
     }
 
 
+def detect_report_type(filename, file_path=None):
+    """Classify reports from filename and Report Type content."""
+    lower_name = str(filename or "").lower()
+
+    if lower_name.startswith("incident"):
+        return "Incident"
+    if lower_name.startswith("anomaly"):
+        return "Anomaly"
+    if lower_name.startswith(("camera_health", "tamper", "camera_integrity")):
+        return "Camera Integrity"
+
+    if file_path and os.path.exists(file_path):
+        try:
+            with open(file_path, "r") as file:
+                for _ in range(16):
+                    line = file.readline()
+                    if not line:
+                        break
+                    if line.lower().startswith("report type:"):
+                        value = line.split(":", 1)[1].strip().lower()
+                        if "camera" in value or "tamper" in value or "integrity" in value:
+                            return "Camera Integrity"
+                        if "incident" in value:
+                            return "Incident"
+                        if "anomaly" in value:
+                            return "Anomaly"
+        except Exception:
+            pass
+
+    return "General"
+
+
 @app.get("/api/reports")
 def get_reports():
     reports = []
@@ -1055,7 +1187,6 @@ def get_reports():
             continue
 
         file_path = os.path.join(REPORTS_DIR, filename)
-
         if not os.path.isfile(file_path):
             continue
 
@@ -1065,12 +1196,13 @@ def get_reports():
         if not os.path.exists(pdf_path):
             txt_report_to_pdf(file_path)
 
-        report_type = "Incident" if filename.startswith("incident") else "Anomaly"
+        report_type = detect_report_type(filename, file_path)
 
         reports.append({
             "filename": filename,
             "pdf_filename": pdf_filename,
             "type": report_type,
+            "type_key": report_type.lower().replace(" ", "_"),
             "size": os.path.getsize(file_path),
             "pdf_size": os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0,
             "created": time.strftime(
@@ -1082,7 +1214,6 @@ def get_reports():
         })
 
     reports.sort(key=lambda report: report["created"], reverse=True)
-
     return {"reports": reports}
 
 
@@ -1225,8 +1356,7 @@ def get_anomalies():
     if df.empty or "anomaly_detected" not in df.columns:
         return {"anomalies": []}
 
-    anomalies_df = df[df["anomaly_detected"].astype(str) == "True"]
-
+    anomalies_df = df[df["anomaly_detected"].astype(str).str.lower() == "true"]
     if anomalies_df.empty:
         return {"anomalies": []}
 
@@ -1235,119 +1365,158 @@ def get_anomalies():
 
 @app.get("/api/latest-anomaly")
 def get_latest_anomaly():
-    df = load_events()
+    runtime = get_runtime_context()
+    current_event = runtime.get("current_event")
+    last_recorded = get_last_recorded_anomaly()
 
-    if df.empty or "anomaly_detected" not in df.columns:
-        return {"latest_anomaly": None}
+    active_anomaly = current_event if current_event and as_bool(current_event.get("anomaly_detected")) else None
 
-    anomalies_df = df[df["anomaly_detected"].astype(str) == "True"]
-
-    if anomalies_df.empty:
-        return {"latest_anomaly": None}
-
-    return {"latest_anomaly": anomalies_df.tail(1).to_dict(orient="records")[0]}
+    return {
+        "latest_anomaly": active_anomaly,
+        "last_recorded_anomaly": last_recorded,
+        "state": "active" if active_anomaly else ("historical" if last_recorded else "none"),
+        "monitoring_running": runtime.get("running", False),
+        "live_data": runtime.get("latest_event_fresh", False)
+    }
 
 
 @app.get("/api/anomaly-summary")
 def get_anomaly_summary():
     df = load_events()
+    runtime = get_runtime_context()
+    current_event = runtime.get("current_event")
+    active_anomaly = current_event if current_event and as_bool(current_event.get("anomaly_detected")) else None
+
+    empty = {
+        "active_anomalies": 1 if active_anomaly else 0,
+        "total_anomalies": 0,
+        "highest_anomaly_score": 0,
+        "latest_anomaly_type": "Normal",
+        "latest_anomaly_severity": "Normal",
+        "latest_anomaly_zone": "None",
+        "latest_anomaly_recommendation": "Monitor",
+        "latest_recorded_at": None,
+        "monitoring_running": runtime.get("running", False),
+    }
 
     if df.empty or "anomaly_detected" not in df.columns:
-        return {
-            "total_anomalies": 0,
-            "highest_anomaly_score": 0,
-            "latest_anomaly_type": "Normal",
-            "latest_anomaly_severity": "Normal",
-            "latest_anomaly_zone": "None",
-            "latest_anomaly_recommendation": "Monitor"
-        }
+        return empty
 
-    anomalies_df = df[df["anomaly_detected"].astype(str) == "True"]
-
+    anomalies_df = df[df["anomaly_detected"].astype(str).str.lower() == "true"]
     if anomalies_df.empty:
-        return {
-            "total_anomalies": 0,
-            "highest_anomaly_score": 0,
-            "latest_anomaly_type": "Normal",
-            "latest_anomaly_severity": "Normal",
-            "latest_anomaly_zone": "None",
-            "latest_anomaly_recommendation": "Monitor"
-        }
+        return empty
 
     latest = anomalies_df.tail(1).to_dict(orient="records")[0]
-
     return {
+        **empty,
         "total_anomalies": len(anomalies_df),
-        "highest_anomaly_score": int(anomalies_df["anomaly_score"].max()),
+        "highest_anomaly_score": int(pd.to_numeric(anomalies_df["anomaly_score"], errors="coerce").fillna(0).max()),
         "latest_anomaly_type": latest.get("anomaly_type", "Normal"),
         "latest_anomaly_severity": latest.get("anomaly_severity", "Normal"),
         "latest_anomaly_zone": latest.get("anomaly_zone", "None"),
-        "latest_anomaly_recommendation": latest.get("anomaly_recommendation", "Monitor")
+        "latest_anomaly_recommendation": latest.get("anomaly_recommendation", "Monitor"),
+        "latest_recorded_at": latest.get("timestamp"),
     }
 
 
 @app.get("/api/incidents")
-def get_incidents():
+def get_incidents(
+    page: int = 1,
+    page_size: int = 25,
+    density: str = "all",
+    source: str = "all"
+):
     df = load_events()
 
+    try:
+        page = max(1, int(page))
+        page_size = max(5, min(int(page_size), 100))
+    except Exception:
+        page, page_size = 1, 25
+
     if df.empty or "incident_active" not in df.columns:
-        return {"incidents": []}
+        return {
+            "incidents": [],
+            "pagination": {"page": page, "page_size": page_size, "total": 0, "pages": 1}
+        }
 
-    incidents_df = df[df["incident_active"].astype(str) == "True"]
+    incidents_df = df[df["incident_active"].astype(str).str.lower() == "true"].copy()
 
-    if incidents_df.empty:
-        return {"incidents": []}
+    if density.lower() != "all" and "density_level" in incidents_df.columns:
+        incidents_df = incidents_df[incidents_df["density_level"].astype(str).str.lower() == density.lower()]
 
-    return {"incidents": incidents_df.tail(50).to_dict(orient="records")}
+    if source.lower() != "all" and "camera_profile" in incidents_df.columns:
+        incidents_df = incidents_df[incidents_df["camera_profile"].astype(str).str.lower() == source.lower()]
+
+    incidents_df = incidents_df.iloc[::-1]
+    total = len(incidents_df)
+    pages = max(1, (total + page_size - 1) // page_size)
+    page = min(page, pages)
+    start = (page - 1) * page_size
+    end = start + page_size
+
+    return {
+        "incidents": incidents_df.iloc[start:end].to_dict(orient="records"),
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "pages": pages,
+            "has_previous": page > 1,
+            "has_next": page < pages,
+        }
+    }
 
 
 @app.get("/api/latest-incident")
 def get_latest_incident():
-    df = load_events()
+    runtime = get_runtime_context()
+    current_event = runtime.get("current_event")
+    last_recorded = get_last_recorded_incident()
 
-    if df.empty or "incident_active" not in df.columns:
-        return {"latest_incident": None}
+    active_incident = current_event if current_event and as_bool(current_event.get("incident_active")) else None
 
-    incidents_df = df[df["incident_active"].astype(str) == "True"]
-
-    if incidents_df.empty:
-        return {"latest_incident": None}
-
-    return {"latest_incident": incidents_df.tail(1).to_dict(orient="records")[0]}
+    return {
+        "latest_incident": active_incident,
+        "last_recorded_incident": last_recorded,
+        "state": "active" if active_incident else ("historical" if last_recorded else "none"),
+        "monitoring_running": runtime.get("running", False),
+        "live_data": runtime.get("latest_event_fresh", False)
+    }
 
 
 @app.get("/api/incident-summary")
 def get_incident_summary():
     df = load_events()
+    runtime = get_runtime_context()
+    current_event = runtime.get("current_event")
+    active_incident = current_event if current_event and as_bool(current_event.get("incident_active")) else None
+
+    empty = {
+        "active_incidents": 1 if active_incident else 0,
+        "total_incident_events": 0,
+        "longest_incident_duration": 0,
+        "latest_danger_zone": "None",
+        "latest_recommendation": "Monitor",
+        "latest_recorded_at": None,
+        "monitoring_running": runtime.get("running", False),
+    }
 
     if df.empty or "incident_active" not in df.columns:
-        return {
-            "active_incidents": 0,
-            "total_incident_events": 0,
-            "longest_incident_duration": 0,
-            "latest_danger_zone": "None",
-            "latest_recommendation": "Monitor"
-        }
+        return empty
 
-    incidents_df = df[df["incident_active"].astype(str) == "True"]
-
+    incidents_df = df[df["incident_active"].astype(str).str.lower() == "true"]
     if incidents_df.empty:
-        return {
-            "active_incidents": 0,
-            "total_incident_events": 0,
-            "longest_incident_duration": 0,
-            "latest_danger_zone": "None",
-            "latest_recommendation": "Monitor"
-        }
+        return empty
 
     latest_incident = incidents_df.tail(1).to_dict(orient="records")[0]
-
     return {
-        "active_incidents": 1,
+        **empty,
         "total_incident_events": len(incidents_df),
-        "longest_incident_duration": int(incidents_df["incident_duration"].max()),
+        "longest_incident_duration": int(pd.to_numeric(incidents_df["incident_duration"], errors="coerce").fillna(0).max()),
         "latest_danger_zone": latest_incident.get("danger_zone", "None"),
-        "latest_recommendation": latest_incident.get("recommendation", "Monitor")
+        "latest_recommendation": latest_incident.get("recommendation", "Monitor"),
+        "latest_recorded_at": latest_incident.get("timestamp"),
     }
 
 
@@ -1550,7 +1719,9 @@ def list_evidence_files():
 @app.get("/api/camera-health")
 def get_camera_health():
     active_profile = get_active_camera_profile()
-    profiles = load_camera_profiles()
+    all_profiles = load_camera_profiles()
+    presented_profiles = present_camera_profiles(all_profiles, active_profile)
+    profiles = {item["key"]: all_profiles[item["key"]] for item in presented_profiles}
     status = read_camera_status_file()
     latest_event = get_latest_event_record()
     running = is_engine_running()
@@ -1807,23 +1978,16 @@ def normalize_notification_record(notification, fallback_index=0):
 
 
 def build_live_notifications():
-    """
-    Live fallback notifications from the latest CSV/status files.
-    These make the dashboard useful even before data/notifications.json exists.
-    """
+    """Build only conditions that are true right now."""
     notifications = []
-    latest_event = get_latest_event_record()
+    runtime = get_runtime_context()
+    current_event = runtime.get("current_event")
     camera_health = get_camera_health()
-    active_camera = None
+    active_camera = next((camera for camera in camera_health.get("cameras", []) if camera.get("active")), None)
     now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     now_epoch = time.time()
 
-    for camera in camera_health.get("cameras", []):
-        if camera.get("active"):
-            active_camera = camera
-            break
-
-    if not camera_health.get("engine_running"):
+    if not runtime.get("running"):
         notifications.append({
             "type": "engine",
             "category": "engine",
@@ -1837,7 +2001,7 @@ def build_live_notifications():
             "dedupe_key": "live:engine:stopped"
         })
 
-    if active_camera and not active_camera.get("online") and camera_health.get("engine_running"):
+    if runtime.get("running") and active_camera and not active_camera.get("online"):
         notifications.append({
             "type": "camera",
             "category": "camera",
@@ -1852,7 +2016,7 @@ def build_live_notifications():
         })
 
     active_camera_integrity = active_camera.get("camera_health", {}) if active_camera else {}
-    if active_camera_integrity.get("tamper_detected"):
+    if runtime.get("running") and active_camera_integrity.get("tamper_detected"):
         severity = "critical" if active_camera_integrity.get("severity") == "Critical" else "warning"
         tamper_type = active_camera_integrity.get("tamper_type", "Camera Integrity Warning")
         notifications.append({
@@ -1868,11 +2032,11 @@ def build_live_notifications():
             "dedupe_key": f"live:camera_health:{tamper_type}"
         })
 
-    if latest_event:
-        density = str(latest_event.get("density_level", "Unknown"))
-        event_time = latest_event.get("timestamp", now_text)
-        event_epoch = safe_epoch_from_time(event_time) or now_epoch
-        event_source = latest_event.get("camera_profile", get_active_camera_profile())
+    if current_event:
+        density = str(current_event.get("density_level", "Unknown"))
+        event_time = current_event.get("timestamp", now_text)
+        event_epoch_value = safe_epoch_from_time(event_time) or now_epoch
+        event_source = current_event.get("camera_profile", get_active_camera_profile())
 
         if density in ["High", "Critical"]:
             notifications.append({
@@ -1880,98 +2044,137 @@ def build_live_notifications():
                 "category": "density",
                 "severity": "critical" if density == "Critical" else "warning",
                 "title": f"{density} Crowd Density",
-                "message": latest_event.get("alert_message", "Crowd alert detected."),
+                "message": current_event.get("alert_message", "Crowd alert detected."),
                 "source": event_source,
-                "action": latest_event.get("recommendation", "Increase monitoring and prepare response."),
+                "action": current_event.get("recommendation", "Increase monitoring and prepare response."),
                 "time": event_time,
-                "epoch": event_epoch,
-                "dedupe_key": f"live:density:{event_source}:{density}:{event_time}"
+                "epoch": event_epoch_value,
+                "dedupe_key": f"live:density:{event_source}:{density}"
             })
 
-        if str(latest_event.get("incident_active", "False")) == "True":
+        if as_bool(current_event.get("incident_active")):
             notifications.append({
                 "type": "incident",
                 "category": "incident",
                 "severity": "critical",
                 "title": "Active Crowd Incident",
-                "message": (
-                    f"Danger zone: {latest_event.get('danger_zone', 'Unknown')}. "
-                    f"{latest_event.get('recommendation', 'Monitor')}"
-                ),
+                "message": f"Danger zone: {current_event.get('danger_zone', 'Unknown')}. {current_event.get('recommendation', 'Monitor')}",
                 "source": event_source,
-                "action": latest_event.get("recommendation", "Respond to active incident."),
+                "action": current_event.get("recommendation", "Respond to active incident."),
                 "time": event_time,
-                "epoch": event_epoch + 0.01,
-                "dedupe_key": f"live:incident:{event_source}:{latest_event.get('danger_zone', 'Unknown')}:{event_time}"
+                "epoch": event_epoch_value + 0.01,
+                "dedupe_key": f"live:incident:{event_source}:{current_event.get('danger_zone', 'Unknown')}"
             })
 
-        if str(latest_event.get("anomaly_detected", "False")) == "True":
-            anomaly_severity = str(latest_event.get("anomaly_severity", "warning")).lower()
+        if as_bool(current_event.get("anomaly_detected")):
+            anomaly_severity = str(current_event.get("anomaly_severity", "warning")).lower()
             if anomaly_severity == "high":
                 anomaly_severity = "warning"
-
             notifications.append({
                 "type": "anomaly",
                 "category": "anomaly",
                 "severity": anomaly_severity,
-                "title": f"Anomaly: {latest_event.get('anomaly_type', 'Detected')}",
-                "message": (
-                    f"Score: {latest_event.get('anomaly_score', 0)}%. "
-                    f"Zone: {latest_event.get('anomaly_zone', 'Unknown')}"
-                ),
+                "title": f"Anomaly: {current_event.get('anomaly_type', 'Detected')}",
+                "message": f"Score: {current_event.get('anomaly_score', 0)}%. Zone: {current_event.get('anomaly_zone', 'Unknown')}",
                 "source": event_source,
-                "action": latest_event.get("anomaly_recommendation", "Investigate anomaly."),
+                "action": current_event.get("anomaly_recommendation", "Investigate anomaly."),
                 "time": event_time,
-                "epoch": event_epoch + 0.02,
-                "dedupe_key": f"live:anomaly:{event_source}:{latest_event.get('anomaly_type', 'Detected')}:{event_time}"
+                "epoch": event_epoch_value + 0.02,
+                "dedupe_key": f"live:anomaly:{event_source}:{current_event.get('anomaly_type', 'Detected')}"
             })
 
-    return notifications
+    # Current remote-camera conditions are also active alerts while the camera is online.
+    try:
+        for remote_camera in latest_edge_records():
+            if not remote_camera.get("online"):
+                continue
+
+            edge_id = str(remote_camera.get("edge_id") or "")
+            if edge_id == "manual_test":
+                continue
+
+            edge_name = remote_camera.get("name") or "Remote Camera"
+            edge_health = remote_camera.get("camera_health") or {}
+            edge_density = str(remote_camera.get("density") or "Unknown")
+            edge_time = remote_camera.get("received_at") or now_text
+            edge_epoch = safe_epoch_from_time(remote_camera.get("received_at_epoch")) or now_epoch
+
+            if edge_health.get("tamper_detected"):
+                tamper_type = edge_health.get("tamper_type") or "Camera Integrity Warning"
+                notifications.append({
+                    "type": "remote_camera_health",
+                    "category": "remote_camera_health",
+                    "severity": "critical" if edge_health.get("severity") == "Critical" else "warning",
+                    "title": f"Camera Integrity Alert: {tamper_type}",
+                    "message": edge_health.get("message") or "Remote camera integrity warning detected.",
+                    "source": edge_name,
+                    "action": "Inspect the camera lens, lighting, cable, stream, or network connection.",
+                    "time": edge_time,
+                    "epoch": edge_epoch,
+                    "dedupe_key": f"live:remote-camera-health:{edge_id}:{tamper_type}"
+                })
+
+            if edge_density in ["High", "Critical"]:
+                notifications.append({
+                    "type": "remote_density",
+                    "category": "remote_density",
+                    "severity": "critical" if edge_density == "Critical" else "warning",
+                    "title": f"{edge_density} Crowd Level Detected",
+                    "message": f"{edge_name} currently reports {remote_camera.get('people', 0)} people and a {edge_density.lower()} crowd level.",
+                    "source": edge_name,
+                    "action": "Review the camera view and prepare a response if crowd pressure continues.",
+                    "time": edge_time,
+                    "epoch": edge_epoch + 0.03,
+                    "dedupe_key": f"live:remote-density:{edge_id}:{edge_density}"
+                })
+    except Exception as error:
+        print(f"Unable to evaluate current remote-camera alerts: {error}")
+
+    active_items = [normalize_notification_record(item, index) for index, item in enumerate(notifications)]
+    for item in active_items:
+        item["is_active"] = True
+    return active_items
 
 
-def merge_notifications(stored_notifications, live_notifications, limit):
-    merged = []
-    seen = set()
-
-    combined = []
-    combined.extend(stored_notifications or [])
-    combined.extend(live_notifications or [])
-
-    normalized_items = [
+def get_recent_notification_activity(stored_notifications, active_notifications, limit=6):
+    active_keys = {item.get("dedupe_key") for item in active_notifications}
+    normalized = [
         normalize_notification_record(item, index)
-        for index, item in enumerate(combined)
+        for index, item in enumerate(stored_notifications or [])
     ]
+    normalized.sort(key=lambda item: float(item.get("epoch", 0)), reverse=True)
 
-    normalized_items.sort(
-        key=lambda item: float(item.get("epoch", 0)),
-        reverse=True
-    )
-
-    for item in normalized_items:
+    recent = []
+    seen = set()
+    for item in normalized:
         key = item.get("dedupe_key") or item.get("id")
-        if key in seen:
+        if key in active_keys or key in seen:
             continue
-
         seen.add(key)
-        merged.append(item)
-
-        if len(merged) >= int(limit):
+        item["is_active"] = False
+        recent.append(item)
+        if len(recent) >= int(limit):
             break
-
-    return merged
+    return recent
 
 
 @app.get("/api/notifications")
 def get_notifications():
     stored_notifications = read_notification_file()
-    live_notifications = build_live_notifications()
+    active_notifications = build_live_notifications()
+    recent_activity = get_recent_notification_activity(
+        stored_notifications=stored_notifications,
+        active_notifications=active_notifications,
+        limit=6
+    )
 
+    combined = active_notifications + recent_activity
     return {
-        "notifications": merge_notifications(
-            stored_notifications=stored_notifications,
-            live_notifications=live_notifications,
-            limit=NOTIFICATION_LIMIT
-        )
+        "notifications": combined,
+        "active_notifications": active_notifications,
+        "recent_activity": recent_activity,
+        "active_count": len(active_notifications),
+        "recent_count": len(recent_activity),
     }
 
 
@@ -2488,26 +2691,57 @@ def get_evidence():
     return {"evidence": list_evidence_files()}
 
 
-@app.get("/api/camera-profiles")
-def get_camera_profiles_endpoint():
-    active_profile = get_active_camera_profile()
-    camera_profiles = load_camera_profiles()
+def camera_profile_signature(profile):
+    source = str(profile.get("source", "")).strip()
+    source_type = str(profile.get("source_type", "camera")).lower()
 
-    profiles = []
+    # Numeric OpenCV device indexes refer to the same physical device even when
+    # older profiles used different labels such as webcam / USB camera.
+    if source.lstrip("-").isdigit() or source_type in {"webcam", "usb_camera"}:
+        return f"device:{source}"
+    if source_type in {"phone_camera", "ip_camera", "rtsp_camera", "drone_stream"}:
+        return f"stream:{source.rstrip('/').lower()}"
+    return f"source:{source.lower()}"
 
+
+def present_camera_profiles(camera_profiles, active_profile):
+    """Hide duplicate physical sources without deleting user configuration."""
+    groups = {}
     for key, profile in camera_profiles.items():
-        profiles.append({
+        groups.setdefault(camera_profile_signature(profile), []).append((key, profile))
+
+    presented = []
+    for items in groups.values():
+        items.sort(key=lambda item: (
+            item[0] == active_profile,
+            item[0] in {"webcam", "crowd_video"},
+            str(item[1].get("created_at", ""))
+        ), reverse=True)
+        key, profile = items[0]
+        duplicate_keys = [item_key for item_key, _ in items[1:]]
+        presented.append({
             "key": key,
             "name": profile.get("name", key),
             "source": str(profile.get("source", "")),
             "source_type": profile.get("source_type", "camera"),
             "zones": len(profile.get("zones", [])),
-            "active": key == active_profile
+            "active": key == active_profile,
+            "duplicate_count": len(duplicate_keys),
+            "hidden_duplicate_keys": duplicate_keys,
         })
+
+    presented.sort(key=lambda profile: (not profile.get("active"), profile.get("name", "").lower()))
+    return presented
+
+
+@app.get("/api/camera-profiles")
+def get_camera_profiles_endpoint():
+    active_profile = get_active_camera_profile()
+    camera_profiles = load_camera_profiles()
 
     return {
         "active_profile": active_profile,
-        "profiles": profiles
+        "profiles": present_camera_profiles(camera_profiles, active_profile)
     }
 
 
@@ -2577,9 +2811,21 @@ def create_device_source(
     device_index: int = Form(0),
     source_type: str = Form("webcam")
 ):
+    requested_signature = f"device:{device_index}"
+    existing_profiles = load_camera_profiles()
+
+    for existing_key, existing_profile in existing_profiles.items():
+        if camera_profile_signature(existing_profile) == requested_signature:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Camera device {device_index} is already saved as "
+                    f"{existing_profile.get('name', existing_key)}. Use the existing source instead."
+                )
+            )
+
     key = create_source_key(source_type)
     profile = default_source_profile(name, device_index, source_type)
-
     add_camera_source_profile(key, profile)
     set_active_camera_profile(key)
 
