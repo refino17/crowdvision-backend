@@ -758,3 +758,13 @@ timestamp,camera_profile,total_people,zone_count,occupancy,peak_occupancy,line_e
 2026-07-04 10:19:36,webcam,1,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,0,Stable,False,Normal,0,Normal,None,Monitor
 2026-07-04 10:19:45,webcam,1,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,0,Stable,False,Normal,0,Normal,None,Monitor
 2026-07-04 10:19:53,webcam,1,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,1,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-06 13:27:30,crowd_video,0,0,0,0,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,0,0,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-06 13:27:40,crowd_video,6,3,3,3,0,0,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,12,6,Increasing,False,Normal,0,Normal,None,Monitor
+2026-07-06 13:27:48,crowd_video,4,1,4,5,0,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,3,4,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-06 13:27:57,crowd_video,3,1,2,5,2,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,3,2,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-06 13:28:05,crowd_video,6,4,4,5,2,1,High,WARNING: High crowd density!,True,1,Table Area,Increase monitoring and prepare crowd-control response.,8,5,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-06 13:28:14,crowd_video,5,3,7,7,2,1,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,4,8,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-06 13:28:23,crowd_video,8,5,5,7,3,2,High,WARNING: High crowd density!,True,1,Table Area,Increase monitoring and prepare crowd-control response.,8,5,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-06 13:28:31,crowd_video,4,2,4,7,5,2,Medium,NOTICE: Moderate crowd density.,False,0,None,Monitor,3,4,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-06 13:28:39,crowd_video,6,4,4,4,0,0,High,WARNING: High crowd density!,True,0,Table Area,Increase monitoring and prepare crowd-control response.,7,3,Stable,False,Normal,0,Normal,None,Monitor
+2026-07-06 13:28:47,crowd_video,4,1,1,5,2,0,Low,SAFE: Crowd level is low.,False,0,None,Monitor,3,0,Stable,False,Normal,0,Normal,None,Monitor

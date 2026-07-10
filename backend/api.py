@@ -53,6 +53,7 @@ EDGE_META_DIR = "data/edge/meta"
 EDGE_PREVIEW_DIR = "data/edge/previews"
 EDGE_PREVIEW_MAX_BYTES = 2_500_000
 EDGE_PREVIEW_STALE_AFTER_SECONDS = 5
+LEGACY_SOURCE_PRESET_KEYS = {"webcam", "crowd_video"}
 
 ENGINE_PROCESS = None
 PROJECT_ROOT = os.getcwd()
@@ -2705,34 +2706,66 @@ def camera_profile_signature(profile):
 
 
 def present_camera_profiles(camera_profiles, active_profile):
-    """Hide duplicate physical sources without deleting user configuration."""
+    """
+    Return only operator-facing camera sources.
+
+    Older CrowdVision versions always exposed the built-in ``webcam`` and
+    ``crowd_video`` presets. Those presets are now treated as internal
+    fallbacks: they stay available to the engine, but disappear from the
+    operator interface once a saved source replaces them.
+
+    Duplicate physical devices and duplicate stream URLs are collapsed
+    without deleting the user's configuration. The active source always wins.
+    """
+
     groups = {}
+
     for key, profile in camera_profiles.items():
-        groups.setdefault(camera_profile_signature(profile), []).append((key, profile))
+        signature = camera_profile_signature(profile)
+        groups.setdefault(signature, []).append((key, profile))
 
     presented = []
+
     for items in groups.values():
-        items.sort(key=lambda item: (
-            item[0] == active_profile,
-            item[0] in {"webcam", "crowd_video"},
-            str(item[1].get("created_at", ""))
-        ), reverse=True)
+        items.sort(
+            key=lambda item: (
+                item[0] == active_profile,
+                item[0] not in LEGACY_SOURCE_PRESET_KEYS,
+                str(item[1].get("created_at", "")),
+            ),
+            reverse=True,
+        )
+
         key, profile = items[0]
+        is_active = key == active_profile
+
+        # Hide unused built-in presets from operators. They remain available
+        # internally as engine fallbacks, so no configuration is deleted.
+        if key in LEGACY_SOURCE_PRESET_KEYS and not is_active:
+            continue
+
         duplicate_keys = [item_key for item_key, _ in items[1:]]
+
         presented.append({
             "key": key,
             "name": profile.get("name", key),
             "source": str(profile.get("source", "")),
             "source_type": profile.get("source_type", "camera"),
             "zones": len(profile.get("zones", [])),
-            "active": key == active_profile,
+            "active": is_active,
             "duplicate_count": len(duplicate_keys),
             "hidden_duplicate_keys": duplicate_keys,
+            "legacy_preset": key in LEGACY_SOURCE_PRESET_KEYS,
         })
 
-    presented.sort(key=lambda profile: (not profile.get("active"), profile.get("name", "").lower()))
-    return presented
+    presented.sort(
+        key=lambda profile: (
+            not profile.get("active"),
+            profile.get("name", "").lower(),
+        )
+    )
 
+    return presented
 
 @app.get("/api/camera-profiles")
 def get_camera_profiles_endpoint():
@@ -2815,6 +2848,12 @@ def create_device_source(
     existing_profiles = load_camera_profiles()
 
     for existing_key, existing_profile in existing_profiles.items():
+        # Built-in fallback presets do not count as operator-created camera
+        # records. This lets the user replace the old default webcam card with
+        # a named saved source while still preventing real duplicates.
+        if existing_key in LEGACY_SOURCE_PRESET_KEYS:
+            continue
+
         if camera_profile_signature(existing_profile) == requested_signature:
             raise HTTPException(
                 status_code=409,

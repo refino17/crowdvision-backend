@@ -1,5 +1,383 @@
 [
   {
+    "id": "cvn_1783344523923",
+    "time": "2026-07-06 13:28:43",
+    "epoch": 1783344523.9237518,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on crowd_video. Zone: Entrance Area. Duration: 4s. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "high",
+    "category": "incident",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "incident:crowd_video:Entrance Area:High",
+    "metadata": {
+      "density_level": "High",
+      "danger_zone": "Entrance Area",
+      "duration": 4
+    }
+  },
+  {
+    "id": "cvn_1783344523920",
+    "time": "2026-07-06 13:28:43",
+    "epoch": 1783344523.9207819,
+    "title": "High Crowd Density",
+    "message": "WARNING: High crowd density! Source crowd_video has 4 people in the monitored zone with occupancy 5. Danger zone: Entrance Area.",
+    "severity": "high",
+    "category": "density",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "density:crowd_video:High:Entrance Area",
+    "metadata": {
+      "density_level": "High",
+      "zone_count": 4,
+      "occupancy": 5,
+      "danger_zone": "Entrance Area"
+    }
+  },
+  {
+    "id": "cvn_1783344517439",
+    "time": "2026-07-06 13:28:37",
+    "epoch": 1783344517.4396496,
+    "title": "Crowd Surge Detected",
+    "message": "Anomaly detected on crowd_video. Score: 60%. Zone: Table Area. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "medium",
+    "category": "anomaly",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "anomaly:crowd_video:Crowd Surge:Table Area",
+    "metadata": {
+      "anomaly_type": "Crowd Surge",
+      "anomaly_score": 60,
+      "anomaly_zone": "Table Area"
+    }
+  },
+  {
+    "id": "cvn_1783344514526",
+    "time": "2026-07-06 13:28:34",
+    "epoch": 1783344514.5269244,
+    "title": "Occupancy Spike Detected",
+    "message": "Anomaly detected on crowd_video. Score: 50%. Zone: Entrance Area. Recommended action: Redirect crowd flow away from the overloaded area.",
+    "severity": "medium",
+    "category": "anomaly",
+    "source": "crowd_video",
+    "action": "Redirect crowd flow away from the overloaded area.",
+    "dedupe_key": "anomaly:crowd_video:Occupancy Spike:Entrance Area",
+    "metadata": {
+      "anomaly_type": "Occupancy Spike",
+      "anomaly_score": 50,
+      "anomaly_zone": "Entrance Area"
+    }
+  },
+  {
+    "id": "cvn_1783344504340",
+    "time": "2026-07-06 13:28:24",
+    "epoch": 1783344504.340655,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on crowd_video. Zone: Table Area. Duration: 2s. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "high",
+    "category": "incident",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "incident:crowd_video:Table Area:High",
+    "metadata": {
+      "density_level": "High",
+      "danger_zone": "Table Area",
+      "duration": 2
+    }
+  },
+  {
+    "id": "cvn_1783344504338",
+    "time": "2026-07-06 13:28:24",
+    "epoch": 1783344504.338354,
+    "title": "High Crowd Density",
+    "message": "WARNING: High crowd density! Source crowd_video has 5 people in the monitored zone with occupancy 6. Danger zone: Table Area.",
+    "severity": "high",
+    "category": "density",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "density:crowd_video:High:Table Area",
+    "metadata": {
+      "density_level": "High",
+      "zone_count": 5,
+      "occupancy": 6,
+      "danger_zone": "Table Area"
+    }
+  },
+  {
+    "id": "cvn_1783344499159",
+    "time": "2026-07-06 13:28:19",
+    "epoch": 1783344499.1593418,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on crowd_video. Zone: Entrance Area. Duration: 0s. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "high",
+    "category": "incident",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "incident:crowd_video:Entrance Area:High",
+    "metadata": {
+      "density_level": "High",
+      "danger_zone": "Entrance Area",
+      "duration": 0
+    }
+  },
+  {
+    "id": "cvn_1783344499156",
+    "time": "2026-07-06 13:28:19",
+    "epoch": 1783344499.1566725,
+    "title": "High Crowd Density",
+    "message": "WARNING: High crowd density! Source crowd_video has 4 people in the monitored zone with occupancy 4. Danger zone: Entrance Area.",
+    "severity": "high",
+    "category": "density",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "density:crowd_video:High:Entrance Area",
+    "metadata": {
+      "density_level": "High",
+      "zone_count": 4,
+      "occupancy": 4,
+      "danger_zone": "Entrance Area"
+    }
+  },
+  {
+    "id": "cvn_1783344496167",
+    "time": "2026-07-06 13:28:16",
+    "epoch": 1783344496.1675372,
+    "title": "Crowd Surge Detected",
+    "message": "Anomaly detected on crowd_video. Score: 60%. Zone: Entrance Area. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "medium",
+    "category": "anomaly",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "anomaly:crowd_video:Crowd Surge:Entrance Area",
+    "metadata": {
+      "anomaly_type": "Crowd Surge",
+      "anomaly_score": 60,
+      "anomaly_zone": "Entrance Area"
+    }
+  },
+  {
+    "id": "cvn_1783344492619",
+    "time": "2026-07-06 13:28:12",
+    "epoch": 1783344492.6199105,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on crowd_video. Zone: Entrance Area. Duration: 8s. Recommended action: Dispatch security immediately and redirect crowd flow.",
+    "severity": "critical",
+    "category": "incident",
+    "source": "crowd_video",
+    "action": "Dispatch security immediately and redirect crowd flow.",
+    "dedupe_key": "incident:crowd_video:Entrance Area:Critical",
+    "metadata": {
+      "density_level": "Critical",
+      "danger_zone": "Entrance Area",
+      "duration": 8
+    }
+  },
+  {
+    "id": "cvn_1783344492247",
+    "time": "2026-07-06 13:28:12",
+    "epoch": 1783344492.2471995,
+    "title": "Critical Crowd Density",
+    "message": "DANGER: Critical crowd density! Source crowd_video has 6 people in the monitored zone with occupancy 6. Danger zone: Entrance Area.",
+    "severity": "critical",
+    "category": "density",
+    "source": "crowd_video",
+    "action": "Dispatch security immediately and redirect flow.",
+    "dedupe_key": "density:crowd_video:Critical:Entrance Area",
+    "metadata": {
+      "density_level": "Critical",
+      "zone_count": 6,
+      "occupancy": 6,
+      "danger_zone": "Entrance Area"
+    }
+  },
+  {
+    "id": "cvn_1783344491056",
+    "time": "2026-07-06 13:28:11",
+    "epoch": 1783344491.0563447,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on crowd_video. Zone: Service Area. Duration: 7s. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "high",
+    "category": "incident",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "incident:crowd_video:Service Area:High",
+    "metadata": {
+      "density_level": "High",
+      "danger_zone": "Service Area",
+      "duration": 7
+    }
+  },
+  {
+    "id": "cvn_1783344491053",
+    "time": "2026-07-06 13:28:11",
+    "epoch": 1783344491.053432,
+    "title": "High Crowd Density",
+    "message": "WARNING: High crowd density! Source crowd_video has 5 people in the monitored zone with occupancy 5. Danger zone: Service Area.",
+    "severity": "high",
+    "category": "density",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "density:crowd_video:High:Service Area",
+    "metadata": {
+      "density_level": "High",
+      "zone_count": 5,
+      "occupancy": 5,
+      "danger_zone": "Service Area"
+    }
+  },
+  {
+    "id": "cvn_1783344483906",
+    "time": "2026-07-06 13:28:03",
+    "epoch": 1783344483.9068372,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on crowd_video. Zone: Table Area. Duration: 0s. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "high",
+    "category": "incident",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "incident:crowd_video:Table Area:High",
+    "metadata": {
+      "density_level": "High",
+      "danger_zone": "Table Area",
+      "duration": 0
+    }
+  },
+  {
+    "id": "cvn_1783344483904",
+    "time": "2026-07-06 13:28:03",
+    "epoch": 1783344483.904444,
+    "title": "High Crowd Density",
+    "message": "WARNING: High crowd density! Source crowd_video has 4 people in the monitored zone with occupancy 4. Danger zone: Table Area.",
+    "severity": "high",
+    "category": "density",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "density:crowd_video:High:Table Area",
+    "metadata": {
+      "density_level": "High",
+      "zone_count": 4,
+      "occupancy": 4,
+      "danger_zone": "Table Area"
+    }
+  },
+  {
+    "id": "cvn_1783344482781",
+    "time": "2026-07-06 13:28:02",
+    "epoch": 1783344482.7810583,
+    "title": "Occupancy Spike Detected",
+    "message": "Anomaly detected on crowd_video. Score: 50%. Zone: Table Area. Recommended action: Redirect crowd flow away from the overloaded area.",
+    "severity": "medium",
+    "category": "anomaly",
+    "source": "crowd_video",
+    "action": "Redirect crowd flow away from the overloaded area.",
+    "dedupe_key": "anomaly:crowd_video:Occupancy Spike:Table Area",
+    "metadata": {
+      "anomaly_type": "Occupancy Spike",
+      "anomaly_score": 50,
+      "anomaly_zone": "Table Area"
+    }
+  },
+  {
+    "id": "cvn_1783344465840",
+    "time": "2026-07-06 13:27:45",
+    "epoch": 1783344465.840725,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on crowd_video. Zone: Entrance Area. Duration: 2s. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "high",
+    "category": "incident",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "incident:crowd_video:Entrance Area:High",
+    "metadata": {
+      "density_level": "High",
+      "danger_zone": "Entrance Area",
+      "duration": 2
+    }
+  },
+  {
+    "id": "cvn_1783344465836",
+    "time": "2026-07-06 13:27:45",
+    "epoch": 1783344465.836951,
+    "title": "High Crowd Density",
+    "message": "WARNING: High crowd density! Source crowd_video has 4 people in the monitored zone with occupancy 5. Danger zone: Entrance Area.",
+    "severity": "high",
+    "category": "density",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "density:crowd_video:High:Entrance Area",
+    "metadata": {
+      "density_level": "High",
+      "zone_count": 4,
+      "occupancy": 5,
+      "danger_zone": "Entrance Area"
+    }
+  },
+  {
+    "id": "cvn_1783344463144",
+    "time": "2026-07-06 13:27:43",
+    "epoch": 1783344463.1440392,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on crowd_video. Zone: Table Area. Duration: 0s. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "high",
+    "category": "incident",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "incident:crowd_video:Table Area:High",
+    "metadata": {
+      "density_level": "High",
+      "danger_zone": "Table Area",
+      "duration": 0
+    }
+  },
+  {
+    "id": "cvn_1783344463141",
+    "time": "2026-07-06 13:27:43",
+    "epoch": 1783344463.141521,
+    "title": "High Crowd Density",
+    "message": "WARNING: High crowd density! Source crowd_video has 4 people in the monitored zone with occupancy 4. Danger zone: Table Area.",
+    "severity": "high",
+    "category": "density",
+    "source": "crowd_video",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "density:crowd_video:High:Table Area",
+    "metadata": {
+      "density_level": "High",
+      "zone_count": 4,
+      "occupancy": 4,
+      "danger_zone": "Table Area"
+    }
+  },
+  {
+    "id": "cvn_1783344459925",
+    "time": "2026-07-06 13:27:39",
+    "epoch": 1783344459.925115,
+    "title": "Crowd Surge Detected",
+    "message": "Anomaly detected on crowd_video. Score: 100%. Zone: Table Area. Recommended action: Dispatch security immediately and investigate abnormal crowd behavior.",
+    "severity": "critical",
+    "category": "anomaly",
+    "source": "crowd_video",
+    "action": "Dispatch security immediately and investigate abnormal crowd behavior.",
+    "dedupe_key": "anomaly:crowd_video:Crowd Surge:Table Area",
+    "metadata": {
+      "anomaly_type": "Crowd Surge",
+      "anomaly_score": 100,
+      "anomaly_zone": "Table Area"
+    }
+  },
+  {
+    "id": "cvn_1783344450580",
+    "time": "2026-07-06 13:27:30",
+    "epoch": 1783344450.5809824,
+    "title": "Monitoring Engine Started",
+    "message": "CrowdVision AI started on profile crowd_video using Video File in LOW mode.",
+    "severity": "normal",
+    "category": "engine",
+    "source": "crowd_video",
+    "action": "Check monitoring engine status.",
+    "dedupe_key": "engine:Monitoring Engine Started:crowd_video",
+    "metadata": {}
+  },
+  {
     "id": "edge_1783160493",
     "category": "edge_control",
     "type": "edge_control",
@@ -498,466 +876,6 @@
     "metadata": {
       "edge_id": "gate_01",
       "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783147971",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:52:51",
-    "epoch": 1783147971.3718297,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783147892",
-    "category": "edge_control",
-    "type": "edge_control",
-    "severity": "normal",
-    "title": "Edge Worker Started",
-    "message": "Gate 01 Camera started from the dashboard.",
-    "source": "Gate 01 Camera",
-    "action": "Watch edge telemetry and camera health.",
-    "time": "2026-07-04 06:51:32",
-    "epoch": 1783147892.0964825,
-    "dedupe_key": "edge:control:started:gate_01",
-    "metadata": {
-      "edge_id": "gate_01",
-      "pid": 6234,
-      "detect": true
-    }
-  },
-  {
-    "id": "edge_1783147885",
-    "category": "edge_control",
-    "type": "edge_control",
-    "severity": "normal",
-    "title": "Edge Worker Stopped",
-    "message": "Edge worker gate_01 was stopped from the dashboard.",
-    "source": "gate_01",
-    "action": "Monitor remaining edge nodes.",
-    "time": "2026-07-04 06:51:25",
-    "epoch": 1783147885.056697,
-    "dedupe_key": "edge:control:stopped:gate_01",
-    "metadata": {
-      "edge_id": "gate_01"
-    }
-  },
-  {
-    "id": "edge_1783147880",
-    "category": "edge_control",
-    "type": "edge_control",
-    "severity": "normal",
-    "title": "Edge Worker Stopped",
-    "message": "Edge worker demo_video_01 was stopped from the dashboard.",
-    "source": "demo_video_01",
-    "action": "Monitor remaining edge nodes.",
-    "time": "2026-07-04 06:51:20",
-    "epoch": 1783147880.8171809,
-    "dedupe_key": "edge:control:stopped:demo_video_01",
-    "metadata": {
-      "edge_id": "demo_video_01"
-    }
-  },
-  {
-    "id": "edge_1783147864",
-    "category": "edge_control",
-    "type": "edge_control",
-    "severity": "normal",
-    "title": "Edge Worker Started",
-    "message": "Gate 01 Camera started from the dashboard.",
-    "source": "Gate 01 Camera",
-    "action": "Watch edge telemetry and camera health.",
-    "time": "2026-07-04 06:51:04",
-    "epoch": 1783147864.3412778,
-    "dedupe_key": "edge:control:started:gate_01",
-    "metadata": {
-      "edge_id": "gate_01",
-      "pid": 6224,
-      "detect": true
-    }
-  },
-  {
-    "id": "edge_1783147860",
-    "category": "edge_control",
-    "type": "edge_control",
-    "severity": "normal",
-    "title": "Edge Worker Started",
-    "message": "Demo Edge Video started from the dashboard.",
-    "source": "Demo Edge Video",
-    "action": "Watch edge telemetry and camera health.",
-    "time": "2026-07-04 06:51:00",
-    "epoch": 1783147860.2431712,
-    "dedupe_key": "edge:control:started:demo_video_01",
-    "metadata": {
-      "edge_id": "demo_video_01",
-      "pid": 6223,
-      "detect": true
-    }
-  },
-  {
-    "id": "edge_1783145537",
-    "category": "edge_control",
-    "type": "edge_control",
-    "severity": "normal",
-    "title": "Edge Worker Stopped",
-    "message": "Edge worker gate_01 was stopped from the dashboard.",
-    "source": "gate_01",
-    "action": "Monitor remaining edge nodes.",
-    "time": "2026-07-04 06:12:17",
-    "epoch": 1783145537.87258,
-    "dedupe_key": "edge:control:stopped:gate_01",
-    "metadata": {
-      "edge_id": "gate_01"
-    }
-  },
-  {
-    "id": "edge_1783145527",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:12:07",
-    "epoch": 1783145527.4445906,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783145519",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:11:59",
-    "epoch": 1783145519.34208,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783145511",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:11:51",
-    "epoch": 1783145511.2206807,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783145503",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:11:43",
-    "epoch": 1783145503.1075954,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783145495",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:11:34",
-    "epoch": 1783145494.9908552,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783145486",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:11:26",
-    "epoch": 1783145486.877925,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783145478",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:11:18",
-    "epoch": 1783145478.7731016,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783145472",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:11:10",
-    "epoch": 1783145470.6579955,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783145462",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:11:02",
-    "epoch": 1783145462.5475543,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783145454",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:10:54",
-    "epoch": 1783145454.449093,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783145448",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:10:48",
-    "epoch": 1783145448.0318594,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783145421",
-    "category": "edge_control",
-    "type": "edge_control",
-    "severity": "normal",
-    "title": "Edge Worker Started",
-    "message": "Gate 01 Camera started from the dashboard.",
-    "source": "Gate 01 Camera",
-    "action": "Watch edge telemetry and camera health.",
-    "time": "2026-07-04 06:10:21",
-    "epoch": 1783145421.8558714,
-    "dedupe_key": "edge:control:started:gate_01",
-    "metadata": {
-      "edge_id": "gate_01",
-      "pid": 4653,
-      "detect": false
-    }
-  },
-  {
-    "id": "edge_1783097768",
-    "category": "edge_density",
-    "type": "edge_density",
-    "severity": "warning",
-    "title": "Edge Worker High Density",
-    "message": "Demo Edge Video reported 8 people with High density.",
-    "source": "Demo Edge Video",
-    "action": "Review edge camera feed and prepare response if crowd pressure continues.",
-    "time": "2026-07-03 16:56:08",
-    "epoch": 1783097768.5429087,
-    "dedupe_key": "edge:density:demo_video_01:High",
-    "metadata": {
-      "edge_id": "demo_video_01",
-      "people": 8
-    }
-  },
-  {
-    "id": "edge_1783097758",
-    "category": "edge_density",
-    "type": "edge_density",
-    "severity": "warning",
-    "title": "Edge Worker High Density",
-    "message": "Demo Edge Video reported 10 people with High density.",
-    "source": "Demo Edge Video",
-    "action": "Review edge camera feed and prepare response if crowd pressure continues.",
-    "time": "2026-07-03 16:55:58",
-    "epoch": 1783097758.3852634,
-    "dedupe_key": "edge:density:demo_video_01:High",
-    "metadata": {
-      "edge_id": "demo_video_01",
-      "people": 10
-    }
-  },
-  {
-    "id": "edge_1783097718",
-    "category": "edge_density",
-    "type": "edge_density",
-    "severity": "warning",
-    "title": "Edge Worker High Density",
-    "message": "Demo Edge Video reported 7 people with High density.",
-    "source": "Demo Edge Video",
-    "action": "Review edge camera feed and prepare response if crowd pressure continues.",
-    "time": "2026-07-03 16:55:18",
-    "epoch": 1783097718.0690358,
-    "dedupe_key": "edge:density:demo_video_01:High",
-    "metadata": {
-      "edge_id": "demo_video_01",
-      "people": 7
-    }
-  },
-  {
-    "id": "edge_1783097708",
-    "category": "edge_density",
-    "type": "edge_density",
-    "severity": "warning",
-    "title": "Edge Worker High Density",
-    "message": "Demo Edge Video reported 8 people with High density.",
-    "source": "Demo Edge Video",
-    "action": "Review edge camera feed and prepare response if crowd pressure continues.",
-    "time": "2026-07-03 16:55:08",
-    "epoch": 1783097708.0596044,
-    "dedupe_key": "edge:density:demo_video_01:High",
-    "metadata": {
-      "edge_id": "demo_video_01",
-      "people": 8
-    }
-  },
-  {
-    "id": "edge_1783097697",
-    "category": "edge_density",
-    "type": "edge_density",
-    "severity": "warning",
-    "title": "Edge Worker High Density",
-    "message": "Demo Edge Video reported 8 people with High density.",
-    "source": "Demo Edge Video",
-    "action": "Review edge camera feed and prepare response if crowd pressure continues.",
-    "time": "2026-07-03 16:54:57",
-    "epoch": 1783097697.9263601,
-    "dedupe_key": "edge:density:demo_video_01:High",
-    "metadata": {
-      "edge_id": "demo_video_01",
-      "people": 8
-    }
-  },
-  {
-    "id": "edge_1783097687",
-    "category": "edge_density",
-    "type": "edge_density",
-    "severity": "warning",
-    "title": "Edge Worker High Density",
-    "message": "Demo Edge Video reported 8 people with High density.",
-    "source": "Demo Edge Video",
-    "action": "Review edge camera feed and prepare response if crowd pressure continues.",
-    "time": "2026-07-03 16:54:47",
-    "epoch": 1783097687.7823122,
-    "dedupe_key": "edge:density:demo_video_01:High",
-    "metadata": {
-      "edge_id": "demo_video_01",
-      "people": 8
-    }
-  },
-  {
-    "id": "edge_1783097677",
-    "category": "edge_density",
-    "type": "edge_density",
-    "severity": "warning",
-    "title": "Edge Worker High Density",
-    "message": "Demo Edge Video reported 10 people with High density.",
-    "source": "Demo Edge Video",
-    "action": "Review edge camera feed and prepare response if crowd pressure continues.",
-    "time": "2026-07-03 16:54:37",
-    "epoch": 1783097677.6249356,
-    "dedupe_key": "edge:density:demo_video_01:High",
-    "metadata": {
-      "edge_id": "demo_video_01",
-      "people": 10
-    }
-  },
-  {
-    "id": "edge_1783097657",
-    "category": "edge_density",
-    "type": "edge_density",
-    "severity": "warning",
-    "title": "Edge Worker High Density",
-    "message": "Demo Edge Video reported 7 people with High density.",
-    "source": "Demo Edge Video",
-    "action": "Review edge camera feed and prepare response if crowd pressure continues.",
-    "time": "2026-07-03 16:54:17",
-    "epoch": 1783097657.352577,
-    "dedupe_key": "edge:density:demo_video_01:High",
-    "metadata": {
-      "edge_id": "demo_video_01",
-      "people": 7
     }
   }
 ]
