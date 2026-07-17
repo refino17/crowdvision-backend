@@ -1,5 +1,448 @@
 [
   {
+    "id": "cvn_1783767907369",
+    "time": "2026-07-11 11:05:07",
+    "epoch": 1783767907.3697662,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on uploaded_video_20260629_095850. Zone: Main Monitoring Zone. Duration: 1s. Recommended action: Dispatch security immediately and redirect crowd flow.",
+    "severity": "critical",
+    "category": "incident",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Dispatch security immediately and redirect crowd flow.",
+    "dedupe_key": "incident:uploaded_video_20260629_095850:Main Monitoring Zone:Critical",
+    "metadata": {
+      "density_level": "Critical",
+      "danger_zone": "Main Monitoring Zone",
+      "duration": 1
+    }
+  },
+  {
+    "id": "cvn_1783767907365",
+    "time": "2026-07-11 11:05:07",
+    "epoch": 1783767907.3651783,
+    "title": "Critical Crowd Density",
+    "message": "DANGER: Critical crowd density! Source uploaded_video_20260629_095850 has 6 people in the monitored zone with occupancy 6. Danger zone: Main Monitoring Zone.",
+    "severity": "critical",
+    "category": "density",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Dispatch security immediately and redirect flow.",
+    "dedupe_key": "density:uploaded_video_20260629_095850:Critical:Main Monitoring Zone",
+    "metadata": {
+      "density_level": "Critical",
+      "zone_count": 6,
+      "occupancy": 6,
+      "danger_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767906086",
+    "time": "2026-07-11 11:05:06",
+    "epoch": 1783767906.0868945,
+    "title": "Crowd Surge Detected",
+    "message": "Anomaly detected on uploaded_video_20260629_095850. Score: 60%. Zone: Main Monitoring Zone. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "medium",
+    "category": "anomaly",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "anomaly:uploaded_video_20260629_095850:Crowd Surge:Main Monitoring Zone",
+    "metadata": {
+      "anomaly_type": "Crowd Surge",
+      "anomaly_score": 60,
+      "anomaly_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767898141",
+    "time": "2026-07-11 11:04:58",
+    "epoch": 1783767898.1415424,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on uploaded_video_20260629_095850. Zone: Main Monitoring Zone. Duration: 0s. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "high",
+    "category": "incident",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "incident:uploaded_video_20260629_095850:Main Monitoring Zone:High",
+    "metadata": {
+      "density_level": "High",
+      "danger_zone": "Main Monitoring Zone",
+      "duration": 0
+    }
+  },
+  {
+    "id": "cvn_1783767898138",
+    "time": "2026-07-11 11:04:58",
+    "epoch": 1783767898.1383471,
+    "title": "High Crowd Density",
+    "message": "WARNING: High crowd density! Source uploaded_video_20260629_095850 has 4 people in the monitored zone with occupancy 4. Danger zone: Main Monitoring Zone.",
+    "severity": "high",
+    "category": "density",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "density:uploaded_video_20260629_095850:High:Main Monitoring Zone",
+    "metadata": {
+      "density_level": "High",
+      "zone_count": 4,
+      "occupancy": 4,
+      "danger_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767896966",
+    "time": "2026-07-11 11:04:56",
+    "epoch": 1783767896.9661777,
+    "title": "Occupancy Spike Detected",
+    "message": "Anomaly detected on uploaded_video_20260629_095850. Score: 50%. Zone: Main Monitoring Zone. Recommended action: Redirect crowd flow away from the overloaded area.",
+    "severity": "medium",
+    "category": "anomaly",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Redirect crowd flow away from the overloaded area.",
+    "dedupe_key": "anomaly:uploaded_video_20260629_095850:Occupancy Spike:Main Monitoring Zone",
+    "metadata": {
+      "anomaly_type": "Occupancy Spike",
+      "anomaly_score": 50,
+      "anomaly_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767877282",
+    "time": "2026-07-11 11:04:37",
+    "epoch": 1783767877.2828953,
+    "title": "Crowd Surge Detected",
+    "message": "Anomaly detected on uploaded_video_20260629_095850. Score: 100%. Zone: Main Monitoring Zone. Recommended action: Dispatch security immediately and investigate abnormal crowd behavior.",
+    "severity": "critical",
+    "category": "anomaly",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Dispatch security immediately and investigate abnormal crowd behavior.",
+    "dedupe_key": "anomaly:uploaded_video_20260629_095850:Crowd Surge:Main Monitoring Zone",
+    "metadata": {
+      "anomaly_type": "Crowd Surge",
+      "anomaly_score": 100,
+      "anomaly_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767873669",
+    "time": "2026-07-11 11:04:33",
+    "epoch": 1783767873.6690664,
+    "title": "Occupancy Spike Detected",
+    "message": "Anomaly detected on uploaded_video_20260629_095850. Score: 50%. Zone: Main Monitoring Zone. Recommended action: Redirect crowd flow away from the overloaded area.",
+    "severity": "medium",
+    "category": "anomaly",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Redirect crowd flow away from the overloaded area.",
+    "dedupe_key": "anomaly:uploaded_video_20260629_095850:Occupancy Spike:Main Monitoring Zone",
+    "metadata": {
+      "anomaly_type": "Occupancy Spike",
+      "anomaly_score": 50,
+      "anomaly_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767867753",
+    "time": "2026-07-11 11:04:27",
+    "epoch": 1783767867.7533357,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on uploaded_video_20260629_095850. Zone: Main Monitoring Zone. Duration: 0s. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "high",
+    "category": "incident",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "incident:uploaded_video_20260629_095850:Main Monitoring Zone:High",
+    "metadata": {
+      "density_level": "High",
+      "danger_zone": "Main Monitoring Zone",
+      "duration": 0
+    }
+  },
+  {
+    "id": "cvn_1783767867750",
+    "time": "2026-07-11 11:04:27",
+    "epoch": 1783767867.750081,
+    "title": "High Crowd Density",
+    "message": "WARNING: High crowd density! Source uploaded_video_20260629_095850 has 4 people in the monitored zone with occupancy 4. Danger zone: Main Monitoring Zone.",
+    "severity": "high",
+    "category": "density",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "density:uploaded_video_20260629_095850:High:Main Monitoring Zone",
+    "metadata": {
+      "density_level": "High",
+      "zone_count": 4,
+      "occupancy": 4,
+      "danger_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767857067",
+    "time": "2026-07-11 11:04:17",
+    "epoch": 1783767857.0672383,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on uploaded_video_20260629_095850. Zone: Main Monitoring Zone. Duration: 1s. Recommended action: Dispatch security immediately and redirect crowd flow.",
+    "severity": "critical",
+    "category": "incident",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Dispatch security immediately and redirect crowd flow.",
+    "dedupe_key": "incident:uploaded_video_20260629_095850:Main Monitoring Zone:Critical",
+    "metadata": {
+      "density_level": "Critical",
+      "danger_zone": "Main Monitoring Zone",
+      "duration": 1
+    }
+  },
+  {
+    "id": "cvn_1783767857064",
+    "time": "2026-07-11 11:04:17",
+    "epoch": 1783767857.0642822,
+    "title": "Critical Crowd Density",
+    "message": "DANGER: Critical crowd density! Source uploaded_video_20260629_095850 has 6 people in the monitored zone with occupancy 6. Danger zone: Main Monitoring Zone.",
+    "severity": "critical",
+    "category": "density",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Dispatch security immediately and redirect flow.",
+    "dedupe_key": "density:uploaded_video_20260629_095850:Critical:Main Monitoring Zone",
+    "metadata": {
+      "density_level": "Critical",
+      "zone_count": 6,
+      "occupancy": 6,
+      "danger_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767855879",
+    "time": "2026-07-11 11:04:15",
+    "epoch": 1783767855.8790376,
+    "title": "Crowd Surge Detected",
+    "message": "Anomaly detected on uploaded_video_20260629_095850. Score: 60%. Zone: Main Monitoring Zone. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "medium",
+    "category": "anomaly",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "anomaly:uploaded_video_20260629_095850:Crowd Surge:Main Monitoring Zone",
+    "metadata": {
+      "anomaly_type": "Crowd Surge",
+      "anomaly_score": 60,
+      "anomaly_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767847005",
+    "time": "2026-07-11 11:04:07",
+    "epoch": 1783767847.0058534,
+    "title": "Active Crowd Incident",
+    "message": "Incident active on uploaded_video_20260629_095850. Zone: Main Monitoring Zone. Duration: 0s. Recommended action: Increase monitoring and prepare crowd-control response.",
+    "severity": "high",
+    "category": "incident",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "incident:uploaded_video_20260629_095850:Main Monitoring Zone:High",
+    "metadata": {
+      "density_level": "High",
+      "danger_zone": "Main Monitoring Zone",
+      "duration": 0
+    }
+  },
+  {
+    "id": "cvn_1783767847002",
+    "time": "2026-07-11 11:04:07",
+    "epoch": 1783767847.0024872,
+    "title": "High Crowd Density",
+    "message": "WARNING: High crowd density! Source uploaded_video_20260629_095850 has 4 people in the monitored zone with occupancy 4. Danger zone: Main Monitoring Zone.",
+    "severity": "high",
+    "category": "density",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Increase monitoring and prepare crowd-control response.",
+    "dedupe_key": "density:uploaded_video_20260629_095850:High:Main Monitoring Zone",
+    "metadata": {
+      "density_level": "High",
+      "zone_count": 4,
+      "occupancy": 4,
+      "danger_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767845849",
+    "time": "2026-07-11 11:04:05",
+    "epoch": 1783767845.8492484,
+    "title": "Occupancy Spike Detected",
+    "message": "Anomaly detected on uploaded_video_20260629_095850. Score: 50%. Zone: Main Monitoring Zone. Recommended action: Redirect crowd flow away from the overloaded area.",
+    "severity": "medium",
+    "category": "anomaly",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Redirect crowd flow away from the overloaded area.",
+    "dedupe_key": "anomaly:uploaded_video_20260629_095850:Occupancy Spike:Main Monitoring Zone",
+    "metadata": {
+      "anomaly_type": "Occupancy Spike",
+      "anomaly_score": 50,
+      "anomaly_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767822710",
+    "time": "2026-07-11 11:03:42",
+    "epoch": 1783767822.7103317,
+    "title": "Crowd Surge Detected",
+    "message": "Anomaly detected on uploaded_video_20260629_095850. Score: 100%. Zone: Main Monitoring Zone. Recommended action: Dispatch security immediately and investigate abnormal crowd behavior.",
+    "severity": "critical",
+    "category": "anomaly",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Dispatch security immediately and investigate abnormal crowd behavior.",
+    "dedupe_key": "anomaly:uploaded_video_20260629_095850:Crowd Surge:Main Monitoring Zone",
+    "metadata": {
+      "anomaly_type": "Crowd Surge",
+      "anomaly_score": 100,
+      "anomaly_zone": "Main Monitoring Zone"
+    }
+  },
+  {
+    "id": "cvn_1783767817965",
+    "time": "2026-07-11 11:03:37",
+    "epoch": 1783767817.9651349,
+    "title": "Monitoring Engine Started",
+    "message": "CrowdVision AI started on profile uploaded_video_20260629_095850 using Video File in LOW mode.",
+    "severity": "normal",
+    "category": "engine",
+    "source": "uploaded_video_20260629_095850",
+    "action": "Check monitoring engine status.",
+    "dedupe_key": "engine:Monitoring Engine Started:uploaded_video_20260629_095850",
+    "metadata": {}
+  },
+  {
+    "id": "edge_1783767768",
+    "category": "edge_control",
+    "type": "edge_control",
+    "severity": "normal",
+    "title": "Remote Camera Disconnected",
+    "message": "Gate 01 Camera is no longer connected to the command center.",
+    "source": "Gate 01 Camera",
+    "action": "Monitor the remaining connected cameras.",
+    "time": "2026-07-11 11:02:48",
+    "epoch": 1783767768.9080322,
+    "dedupe_key": "camera:control:stopped:gate_01",
+    "metadata": {
+      "edge_id": "gate_01"
+    }
+  },
+  {
+    "id": "edge_1783767764",
+    "category": "edge_control",
+    "type": "edge_control",
+    "severity": "normal",
+    "title": "Remote Camera Disconnected",
+    "message": "Demo Edge Video is no longer connected to the command center.",
+    "source": "Demo Edge Video",
+    "action": "Monitor the remaining connected cameras.",
+    "time": "2026-07-11 11:02:44",
+    "epoch": 1783767764.8872948,
+    "dedupe_key": "camera:control:stopped:demo_video_01",
+    "metadata": {
+      "edge_id": "demo_video_01"
+    }
+  },
+  {
+    "id": "edge_1783767756",
+    "category": "edge_density",
+    "type": "edge_density",
+    "severity": "warning",
+    "title": "High Crowd Level Detected",
+    "message": "Demo Edge Video detected 7 people and a high crowd level.",
+    "source": "Demo Edge Video",
+    "action": "Review the camera view and prepare a response if crowd pressure continues.",
+    "time": "2026-07-11 11:02:36",
+    "epoch": 1783767756.7164311,
+    "dedupe_key": "edge:density:demo_video_01:High",
+    "metadata": {
+      "edge_id": "demo_video_01",
+      "people": 7
+    }
+  },
+  {
+    "id": "edge_1783767736",
+    "category": "edge_density",
+    "type": "edge_density",
+    "severity": "warning",
+    "title": "High Crowd Level Detected",
+    "message": "Demo Edge Video detected 8 people and a high crowd level.",
+    "source": "Demo Edge Video",
+    "action": "Review the camera view and prepare a response if crowd pressure continues.",
+    "time": "2026-07-11 11:02:16",
+    "epoch": 1783767736.5354295,
+    "dedupe_key": "edge:density:demo_video_01:High",
+    "metadata": {
+      "edge_id": "demo_video_01",
+      "people": 8
+    }
+  },
+  {
+    "id": "edge_1783767726",
+    "category": "edge_density",
+    "type": "edge_density",
+    "severity": "warning",
+    "title": "High Crowd Level Detected",
+    "message": "Demo Edge Video detected 10 people and a high crowd level.",
+    "source": "Demo Edge Video",
+    "action": "Review the camera view and prepare a response if crowd pressure continues.",
+    "time": "2026-07-11 11:02:06",
+    "epoch": 1783767726.5338683,
+    "dedupe_key": "edge:density:demo_video_01:High",
+    "metadata": {
+      "edge_id": "demo_video_01",
+      "people": 10
+    }
+  },
+  {
+    "id": "edge_1783767706",
+    "category": "edge_density",
+    "type": "edge_density",
+    "severity": "warning",
+    "title": "High Crowd Level Detected",
+    "message": "Demo Edge Video detected 7 people and a high crowd level.",
+    "source": "Demo Edge Video",
+    "action": "Review the camera view and prepare a response if crowd pressure continues.",
+    "time": "2026-07-11 11:01:46",
+    "epoch": 1783767706.3642108,
+    "dedupe_key": "edge:density:demo_video_01:High",
+    "metadata": {
+      "edge_id": "demo_video_01",
+      "people": 7
+    }
+  },
+  {
+    "id": "edge_1783767655",
+    "category": "edge_control",
+    "type": "edge_control",
+    "severity": "normal",
+    "title": "Remote Camera Connected",
+    "message": "Gate 01 Camera is now connected to the command center.",
+    "source": "Gate 01 Camera",
+    "action": "Monitor the camera view, crowd activity, and camera health.",
+    "time": "2026-07-11 11:00:55",
+    "epoch": 1783767655.5594518,
+    "dedupe_key": "camera:control:started:gate_01",
+    "metadata": {
+      "edge_id": "gate_01",
+      "pid": 3785,
+      "detect": true
+    }
+  },
+  {
+    "id": "edge_1783767647",
+    "category": "edge_control",
+    "type": "edge_control",
+    "severity": "normal",
+    "title": "Remote Camera Connected",
+    "message": "Demo Edge Video is now connected to the command center.",
+    "source": "Demo Edge Video",
+    "action": "Monitor the camera view, crowd activity, and camera health.",
+    "time": "2026-07-11 11:00:47",
+    "epoch": 1783767647.0323253,
+    "dedupe_key": "camera:control:started:demo_video_01",
+    "metadata": {
+      "edge_id": "demo_video_01",
+      "pid": 3775,
+      "detect": true
+    }
+  },
+  {
     "id": "cvn_1783344523923",
     "time": "2026-07-06 13:28:43",
     "epoch": 1783344523.9237518,
@@ -405,474 +848,6 @@
     "time": "2026-07-04 10:21:31",
     "epoch": 1783160491.2438245,
     "dedupe_key": "edge:tamper:gate_01:Frozen Frame",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783160486",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Camera Integrity Alert: Frozen Frame",
-    "message": "Camera image appears frozen. Check network stream, cable, or camera source.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the camera lens, lighting, cable, or network connection.",
-    "time": "2026-07-04 10:21:26",
-    "epoch": 1783160486.2046456,
-    "dedupe_key": "edge:tamper:gate_01:Frozen Frame",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783160481",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Camera Integrity Alert: Frozen Frame",
-    "message": "Camera image appears frozen. Check network stream, cable, or camera source.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the camera lens, lighting, cable, or network connection.",
-    "time": "2026-07-04 10:21:21",
-    "epoch": 1783160481.2170522,
-    "dedupe_key": "edge:tamper:gate_01:Frozen Frame",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783160460",
-    "category": "edge_control",
-    "type": "edge_control",
-    "severity": "normal",
-    "title": "Remote Camera Connected",
-    "message": "Gate 01 Camera is now connected to the command center.",
-    "source": "Gate 01 Camera",
-    "action": "Monitor the camera view, crowd activity, and camera health.",
-    "time": "2026-07-04 10:21:00",
-    "epoch": 1783160460.6850138,
-    "dedupe_key": "camera:control:started:gate_01",
-    "metadata": {
-      "edge_id": "gate_01",
-      "pid": 3900,
-      "detect": true
-    }
-  },
-  {
-    "id": "cvn_1783160335892",
-    "time": "2026-07-04 10:18:55",
-    "epoch": 1783160335.8921475,
-    "title": "Camera Integrity Alert: Blurred Lens",
-    "message": "Camera image is blurry. Clean lens or adjust focus. Source: webcam. Signal quality: Weak.",
-    "severity": "high",
-    "category": "camera_health",
-    "source": "webcam",
-    "action": "Check camera source, lens, stream, lighting, cable, or network immediately.",
-    "dedupe_key": "camera_health:webcam:Blurred Lens",
-    "metadata": {
-      "enabled": true,
-      "status": "Weak Signal",
-      "severity": "Warning",
-      "tamper_detected": true,
-      "tamper_type": "Blurred Lens",
-      "message": "Camera image is blurry. Clean lens or adjust focus.",
-      "brightness": 44.38,
-      "blur_score": 20.06,
-      "frame_change": 84.22,
-      "frozen_seconds": 0.0,
-      "covered_lens": false,
-      "too_dark": false,
-      "too_bright": false,
-      "blurry": true,
-      "frozen_frame": false,
-      "signal_quality": "Weak",
-      "last_alert_at": "2026-07-04 10:18:55",
-      "alert_ready": true
-    }
-  },
-  {
-    "id": "cvn_1783160263883",
-    "time": "2026-07-04 10:17:43",
-    "epoch": 1783160263.8834,
-    "title": "Camera Integrity Alert: Blurred Lens",
-    "message": "Camera image is blurry. Clean lens or adjust focus. Source: webcam. Signal quality: Weak.",
-    "severity": "high",
-    "category": "camera_health",
-    "source": "webcam",
-    "action": "Check camera source, lens, stream, lighting, cable, or network immediately.",
-    "dedupe_key": "camera_health:webcam:Blurred Lens",
-    "metadata": {
-      "enabled": true,
-      "status": "Weak Signal",
-      "severity": "Warning",
-      "tamper_detected": true,
-      "tamper_type": "Blurred Lens",
-      "message": "Camera image is blurry. Clean lens or adjust focus.",
-      "brightness": 33.78,
-      "blur_score": 15.77,
-      "frame_change": 86.78,
-      "frozen_seconds": 0.0,
-      "covered_lens": false,
-      "too_dark": false,
-      "too_bright": false,
-      "blurry": true,
-      "frozen_frame": false,
-      "signal_quality": "Weak",
-      "last_alert_at": "2026-07-04 10:17:43",
-      "alert_ready": true
-    }
-  },
-  {
-    "id": "cvn_1783160202780",
-    "time": "2026-07-04 10:16:42",
-    "epoch": 1783160202.7801716,
-    "title": "Monitoring Engine Started",
-    "message": "CrowdVision AI started on profile webcam using Laptop Webcam in LOW mode.",
-    "severity": "normal",
-    "category": "engine",
-    "source": "webcam",
-    "action": "Check monitoring engine status.",
-    "dedupe_key": "engine:Monitoring Engine Started:webcam",
-    "metadata": {}
-  },
-  {
-    "id": "edge_1783148071",
-    "category": "edge_control",
-    "type": "edge_control",
-    "severity": "normal",
-    "title": "Edge Worker Stopped",
-    "message": "Edge worker gate_01 was stopped from the dashboard.",
-    "source": "gate_01",
-    "action": "Monitor remaining edge nodes.",
-    "time": "2026-07-04 06:54:31",
-    "epoch": 1783148071.811357,
-    "dedupe_key": "edge:control:stopped:gate_01",
-    "metadata": {
-      "edge_id": "gate_01"
-    }
-  },
-  {
-    "id": "edge_1783148069",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:54:29",
-    "epoch": 1783148069.4211807,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148064",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:54:24",
-    "epoch": 1783148064.2988532,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148059",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:54:19",
-    "epoch": 1783148059.179443,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148054",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:54:14",
-    "epoch": 1783148054.1272624,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148049",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:54:09",
-    "epoch": 1783148049.0656264,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148043",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:54:03",
-    "epoch": 1783148043.9611747,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148038",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:58",
-    "epoch": 1783148038.920193,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148033",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:53",
-    "epoch": 1783148033.7184918,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148028",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:48",
-    "epoch": 1783148028.6109917,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148023",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:43",
-    "epoch": 1783148023.4809623,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148018",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:38",
-    "epoch": 1783148018.467467,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148013",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:33",
-    "epoch": 1783148013.1399796,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148008",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:28",
-    "epoch": 1783148008.008678,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783148003",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:23",
-    "epoch": 1783148003.3035412,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783147997",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:17",
-    "epoch": 1783147997.838703,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783147992",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:12",
-    "epoch": 1783147992.656819,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783147987",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:07",
-    "epoch": 1783147987.5496845,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783147982",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:53:02",
-    "epoch": 1783147982.421002,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
-    "metadata": {
-      "edge_id": "gate_01",
-      "source": "0"
-    }
-  },
-  {
-    "id": "edge_1783147977",
-    "category": "edge_camera_health",
-    "type": "edge_camera_health",
-    "severity": "critical",
-    "title": "Edge Camera Integrity Alert: Covered Lens / Blackout",
-    "message": "Camera image is very dark and low-detail. Lens may be covered or the area may be blacked out.",
-    "source": "Gate 01 Camera",
-    "action": "Inspect the edge camera lens, lighting, cable, or network stream.",
-    "time": "2026-07-04 06:52:57",
-    "epoch": 1783147977.358456,
-    "dedupe_key": "edge:tamper:gate_01:Covered Lens / Blackout",
     "metadata": {
       "edge_id": "gate_01",
       "source": "0"

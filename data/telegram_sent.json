@@ -1,0 +1,12 @@
+[
+  {
+    "epoch": 1783905442.9033139,
+    "time": "2026-07-13 01:17:22",
+    "title": "CrowdVision Telegram Test",
+    "severity": "warning",
+    "category": "telegram_test",
+    "source": "CrowdVision AI",
+    "dedupe_key": "telegram:test:1783905435",
+    "telegram_message_id": 6
+  }
+]

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, PlainTextResponse
@@ -11,8 +11,16 @@ import subprocess
 import signal
 import sys
 import json
+import secrets
 
 from app.report_generator import txt_report_to_pdf
+from app.audit import append_audit_log, read_audit_log, summarize_audit_log
+from app.telegram_alerts import (
+    get_telegram_status,
+    send_telegram_alert,
+    send_telegram_alert_from_record,
+)
+from app.security_config import get_edge_api_key, edge_key_enabled, mask_secret
 from app.config import (
     get_camera_profiles as load_camera_profiles,
     get_active_camera_profile,
@@ -53,6 +61,7 @@ EDGE_META_DIR = "data/edge/meta"
 EDGE_PREVIEW_DIR = "data/edge/previews"
 EDGE_PREVIEW_MAX_BYTES = 2_500_000
 EDGE_PREVIEW_STALE_AFTER_SECONDS = 5
+EDGE_SECURITY_HEADER = "X-CrowdVision-Edge-Key"
 LEGACY_SOURCE_PRESET_KEYS = {"webcam", "crowd_video"}
 
 ENGINE_PROCESS = None
@@ -686,6 +695,16 @@ def stop_edge_worker_process(edge_id):
         "metadata": {"edge_id": safe_id}
     })
 
+    append_audit_log(
+        action="Remote camera disconnected",
+        category="camera_network",
+        actor="Operator",
+        source=camera_name,
+        status="Disconnected",
+        details=f"{camera_name} was stopped from the command dashboard.",
+        metadata={"edge_id": safe_id}
+    )
+
     return True
 
 
@@ -741,7 +760,8 @@ def build_edge_command(
     preview=True,
     preview_interval=1.0,
     preview_width=640,
-    preview_quality=68
+    preview_quality=68,
+    api_key=""
 ):
     command = [
         sys.executable,
@@ -758,6 +778,9 @@ def build_edge_command(
         "--preview-width", str(preview_width),
         "--preview-quality", str(preview_quality),
     ]
+
+    if api_key:
+        command.extend(["--api-key", str(api_key)])
 
     if not preview:
         command.append("--no-preview")
@@ -806,6 +829,7 @@ def start_edge_worker_process(config):
     preview_width = max(320, min(int(config.get("preview_width", 640)), 1280))
     preview_quality = max(40, min(int(config.get("preview_quality", 68)), 90))
     api_url = str(config.get("api") or "http://127.0.0.1:8000")
+    api_key = str(config.get("api_key") or get_edge_api_key() or "").strip()
 
     command = build_edge_command(
         edge_id=edge_id,
@@ -823,7 +847,8 @@ def start_edge_worker_process(config):
         preview=preview,
         preview_interval=preview_interval,
         preview_width=preview_width,
-        preview_quality=preview_quality
+        preview_quality=preview_quality,
+        api_key=api_key
     )
 
     env = os.environ.copy()
@@ -832,6 +857,8 @@ def start_edge_worker_process(config):
     env["OPENBLAS_NUM_THREADS"] = "1"
     env["MKL_NUM_THREADS"] = "1"
     env["NUMEXPR_NUM_THREADS"] = "1"
+    if api_key:
+        env["CROWDVISION_EDGE_API_KEY"] = api_key
 
     os.makedirs(EDGE_LOG_DIR, exist_ok=True)
     log_file = open(edge_log_file(edge_id), "a")
@@ -868,7 +895,8 @@ def start_edge_worker_process(config):
         "pid": process.pid,
         "started_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "started_at_epoch": time.time(),
-        "managed_by_api": True
+        "managed_by_api": True,
+        "security_key_enabled": bool(api_key)
     }
     save_edge_meta(edge_id, meta)
 
@@ -884,6 +912,16 @@ def start_edge_worker_process(config):
         "dedupe_key": f"camera:control:started:{edge_id}",
         "metadata": {"edge_id": edge_id, "pid": process.pid, "detect": detect}
     })
+
+    append_audit_log(
+        action="Remote camera connected",
+        category="camera_network",
+        actor="Operator",
+        source=name,
+        status="Connected",
+        details=f"{name} started from the command dashboard.",
+        metadata={"edge_id": edge_id, "pid": process.pid, "detect": detect, "security_key_enabled": bool(api_key)}
+    )
 
     return {
         "message": "Camera connected. The live view will appear in the dashboard within a few seconds.",
@@ -960,6 +998,46 @@ def merge_managed_edge_workers(workers):
     return workers
 
 
+def verify_edge_security(edge_id="remote_camera", provided_key=None):
+    """Require X-CrowdVision-Edge-Key only when CROWDVISION_EDGE_API_KEY is configured."""
+    expected_key = get_edge_api_key()
+
+    if not expected_key:
+        return True
+
+    received_key = str(provided_key or "").strip()
+
+    if secrets.compare_digest(received_key, expected_key):
+        return True
+
+    safe_id = safe_edge_id(edge_id)
+    append_audit_log(
+        action="Remote camera security key rejected",
+        category="security",
+        actor="Remote Camera",
+        source=safe_id,
+        status="Rejected",
+        severity="critical",
+        details="A remote camera request was rejected because the security key was missing or invalid.",
+        metadata={"edge_id": safe_id, "security_header": EDGE_SECURITY_HEADER}
+    )
+
+    raise HTTPException(
+        status_code=401,
+        detail="Remote camera security key is missing or invalid."
+    )
+
+
+def telegram_status_payload():
+    status = get_telegram_status()
+    return {
+        **status,
+        "safe_to_display": True,
+        "note": "Telegram secrets are read from .env and are never displayed in full."
+    }
+
+
+
 @app.get("/api/system/performance")
 def get_system_performance():
     return get_performance_status()
@@ -973,6 +1051,16 @@ def update_performance_mode(mode: str):
         raise HTTPException(status_code=400, detail="Invalid performance mode")
 
     status = get_performance_status()
+
+    append_audit_log(
+        action="Performance mode changed",
+        category="system",
+        actor="Operator",
+        source="System Performance",
+        status="Updated",
+        details=f"Performance mode changed to {mode}.",
+        metadata={"mode": mode}
+    )
 
     return {
         "message": f"Performance mode updated to {mode}",
@@ -1048,6 +1136,16 @@ def start_engine():
 
     save_engine_pid(ENGINE_PROCESS.pid)
 
+    append_audit_log(
+        action="Monitoring started",
+        category="engine",
+        actor="Operator",
+        source=get_active_camera_profile(),
+        status="Started",
+        details=f"AI monitoring engine started in {performance['resolved_mode']} mode.",
+        metadata={"pid": ENGINE_PROCESS.pid, "mode": performance["resolved_mode"]}
+    )
+
     return {
         "message": f"AI monitoring engine started in {performance['resolved_mode']} mode",
         "running": True,
@@ -1080,6 +1178,16 @@ def stop_engine():
     ENGINE_PROCESS = None
     clear_engine_pid()
     mark_camera_status_stopped("Monitoring engine stopped by operator")
+
+    append_audit_log(
+        action="Monitoring stopped",
+        category="engine",
+        actor="Operator",
+        source=get_active_camera_profile(),
+        status="Stopped",
+        details="AI monitoring engine stopped by operator.",
+        metadata={"pid": pid}
+    )
 
     return {
         "message": "AI monitoring engine stopped",
@@ -1230,6 +1338,16 @@ def read_report(filename: str):
 
     with open(file_path, "r") as file:
         content = file.read()
+
+    append_audit_log(
+        action="Report preview opened",
+        category="reports",
+        actor="Operator",
+        source=filename,
+        status="Viewed",
+        details=f"Report preview opened: {filename}",
+        metadata={"filename": filename}
+    )
 
     return PlainTextResponse(content)
 
@@ -2234,7 +2352,7 @@ def append_edge_notification(notification):
         os.makedirs(os.path.dirname(NOTIFICATION_FILE), exist_ok=True)
         existing = read_notification_file()
 
-        existing.append({
+        record = {
             "id": notification.get("id") or f"edge_{int(time.time())}",
             "category": notification.get("category", "edge"),
             "type": notification.get("type", notification.get("category", "edge")),
@@ -2247,7 +2365,21 @@ def append_edge_notification(notification):
             "epoch": notification.get("epoch", time.time()),
             "dedupe_key": notification.get("dedupe_key", f"edge:{notification.get('title', 'event')}"),
             "metadata": notification.get("metadata", {}) if isinstance(notification.get("metadata", {}), dict) else {}
-        })
+        }
+        existing.append(record)
+
+        telegram_result = send_telegram_alert_from_record(record)
+        if telegram_result.get("sent"):
+            append_audit_log(
+                action="Telegram alert sent",
+                category="telegram",
+                actor="CrowdVision AI",
+                source=record.get("source", "Remote Camera"),
+                status="Sent",
+                severity=record.get("severity", "normal"),
+                details=f"Telegram alert delivered for {record.get('title')}.",
+                metadata={"notification_id": record.get("id"), "title": record.get("title")}
+            )
 
         # Keep recent records only. NotificationCenter needs the newest and most useful items.
         existing = sorted(
@@ -2418,13 +2550,16 @@ def latest_edge_records():
 
 
 @app.post("/api/edge/telemetry")
-def receive_edge_telemetry(payload: dict = Body(...)):
+def receive_edge_telemetry(payload: dict = Body(...), x_crowdvision_edge_key: str = Header(default="", alias="X-CrowdVision-Edge-Key")):
     """
     Receive lightweight metadata from an optional edge worker.
 
     This endpoint does not replace the existing monitoring engine. It lets you
     add remote cameras later without changing your current dashboard workflow.
     """
+    edge_id_for_security = payload.get("edge_id") if isinstance(payload, dict) else "remote_camera"
+    verify_edge_security(edge_id_for_security, x_crowdvision_edge_key)
+
     record = normalize_edge_record(payload)
     records = read_edge_telemetry_file()
     records.append(record)
@@ -2478,9 +2613,10 @@ def receive_edge_telemetry(payload: dict = Body(...)):
 
 
 @app.post("/api/edge/preview/{edge_id}")
-async def receive_edge_preview(edge_id: str, file: UploadFile = File(...)):
+async def receive_edge_preview(edge_id: str, file: UploadFile = File(...), x_crowdvision_edge_key: str = Header(default="", alias="X-CrowdVision-Edge-Key")):
     """Receive a lightweight JPEG preview from a local or remote edge worker."""
     safe_id = safe_edge_id(edge_id)
+    verify_edge_security(safe_id, x_crowdvision_edge_key)
     content = await file.read()
 
     if not content:
@@ -2684,7 +2820,83 @@ def get_edge_telemetry(limit: int = 100):
 @app.delete("/api/edge/telemetry")
 def clear_edge_telemetry():
     write_edge_telemetry_file([])
+    append_audit_log(
+        action="Remote camera history cleared",
+        category="camera_network",
+        actor="Operator",
+        source="Remote Camera Network",
+        status="Cleared",
+        details="Remote camera telemetry history was cleared from the dashboard."
+    )
     return {"message": "Camera status history cleared"}
+
+
+@app.get("/api/security/status")
+def get_security_status():
+    return {
+        "edge_api_key_enabled": edge_key_enabled(),
+        "edge_api_key": mask_secret(get_edge_api_key()),
+        "edge_security_header": EDGE_SECURITY_HEADER,
+        "telegram": telegram_status_payload(),
+        "audit_log_enabled": True,
+        "audit_log_file": "data/audit_log.json",
+        "storage_mode": "File-based now; PostgreSQL-ready later"
+    }
+
+
+@app.get("/api/telegram/status")
+def get_telegram_status_endpoint():
+    return telegram_status_payload()
+
+
+@app.post("/api/telegram/test")
+def send_test_telegram_alert(payload: dict = Body(default={})):
+    title = str(payload.get("title") or "CrowdVision Telegram Test")
+    message = str(payload.get("message") or "Telegram alerts are connected to CrowdVision AI.")
+    severity = str(payload.get("severity") or "warning")
+
+    result = send_telegram_alert(
+        title=title,
+        message=message,
+        severity=severity,
+        category="telegram_test",
+        source="CrowdVision AI",
+        action="No action required. This is a configuration test.",
+        dedupe_key=f"telegram:test:{int(time.time())}",
+        force=True
+    )
+
+    append_audit_log(
+        action="Telegram test alert",
+        category="telegram",
+        actor="Operator",
+        source="CrowdVision AI",
+        status="Sent" if result.get("sent") else "Failed",
+        severity="normal" if result.get("sent") else "warning",
+        details=result.get("reason", "Telegram test executed."),
+        metadata={"sent": result.get("sent", False)}
+    )
+
+    if not result.get("sent"):
+        raise HTTPException(status_code=400, detail=result.get("reason", "Unable to send Telegram test alert."))
+
+    return {"message": "Telegram test alert sent", "result": result}
+
+
+@app.get("/api/audit/logs")
+def get_audit_logs(limit: int = 250, category: str = "all", status: str = "all"):
+    logs = read_audit_log(limit=limit, category=category, status=status)
+    return {
+        "logs": logs,
+        "count": len(logs),
+        "summary": summarize_audit_log(logs)
+    }
+
+
+@app.get("/api/audit/summary")
+def get_audit_summary():
+    logs = read_audit_log(limit=2000)
+    return {"summary": summarize_audit_log(logs)}
 
 
 @app.get("/api/evidence")
@@ -2788,6 +3000,16 @@ def activate_camera_profile(profile_key: str):
     if not updated:
         raise HTTPException(status_code=500, detail="Unable to update camera profile")
 
+    append_audit_log(
+        action="Camera source selected",
+        category="camera_source",
+        actor="Operator",
+        source=profile_key,
+        status="Updated",
+        details=f"Active camera source changed to {profile_key}.",
+        metadata={"profile_key": profile_key}
+    )
+
     return {
         "message": "Camera profile updated successfully",
         "active_profile": profile_key,
@@ -2868,6 +3090,16 @@ def create_device_source(
     add_camera_source_profile(key, profile)
     set_active_camera_profile(key)
 
+    append_audit_log(
+        action="Camera source created",
+        category="camera_source",
+        actor="Operator",
+        source=name,
+        status="Created",
+        details=f"Camera device source created and selected: {name}.",
+        metadata={"key": key, "device_index": device_index, "source_type": source_type}
+    )
+
     return {
         "message": "Camera device source created and selected",
         "key": key,
@@ -2894,6 +3126,16 @@ def create_stream_source(
 
     add_camera_source_profile(key, profile)
     set_active_camera_profile(key)
+
+    append_audit_log(
+        action="Stream source created",
+        category="camera_source",
+        actor="Operator",
+        source=name,
+        status="Created",
+        details=f"Stream source created and selected: {name}.",
+        metadata={"key": key, "source_type": source_type}
+    )
 
     return {
         "message": "Stream source created and selected",
@@ -2941,6 +3183,16 @@ async def upload_video_source(
     add_camera_source_profile(key, profile)
     set_active_camera_profile(key)
 
+    append_audit_log(
+        action="Video source uploaded",
+        category="camera_source",
+        actor="Operator",
+        source=name,
+        status="Created",
+        details=f"Uploaded video source created and selected: {name}.",
+        metadata={"key": key, "filename": stored_name}
+    )
+
     return {
         "message": "Video uploaded and selected successfully",
         "key": key,
@@ -2966,6 +3218,16 @@ def delete_source(profile_key: str):
 
     if active_profile == profile_key:
         set_active_camera_profile("webcam")
+
+    append_audit_log(
+        action="Camera source deleted",
+        category="camera_source",
+        actor="Operator",
+        source=profile_key,
+        status="Deleted",
+        details=f"Camera source deleted: {profile_key}.",
+        metadata={"profile_key": profile_key}
+    )
 
     return {
         "message": "Source deleted successfully",

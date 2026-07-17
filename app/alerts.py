@@ -4,6 +4,22 @@ import time
 from datetime import datetime
 
 try:
+    from app.telegram_alerts import send_telegram_alert_from_record
+except Exception:
+    try:
+        from telegram_alerts import send_telegram_alert_from_record
+    except Exception:
+        send_telegram_alert_from_record = None
+
+try:
+    from app.audit import append_audit_log
+except Exception:
+    try:
+        from audit import append_audit_log
+    except Exception:
+        append_audit_log = None
+
+try:
     from config import NOTIFICATION_FILE, NOTIFICATION_LIMIT, NOTIFICATION_COOLDOWN_SECONDS
 except Exception:
     NOTIFICATION_FILE = "data/notifications.json"
@@ -141,6 +157,21 @@ def append_notification(
 
     notifications.insert(0, item)
     save_notifications(notifications)
+
+    if send_telegram_alert_from_record is not None:
+        telegram_result = send_telegram_alert_from_record(item)
+        if append_audit_log is not None and telegram_result.get("sent"):
+            append_audit_log(
+                action="Telegram alert sent",
+                category="telegram",
+                actor="CrowdVision AI",
+                source=item.get("source", "CrowdVision AI"),
+                status="Sent",
+                severity=item.get("severity", "normal"),
+                details=f"Telegram alert delivered for {item.get('title')}",
+                metadata={"notification_id": item.get("id"), "title": item.get("title")}
+            )
+
     return item
 
 

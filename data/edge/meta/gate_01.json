@@ -15,8 +15,8 @@
   "preview_interval": 1.0,
   "preview_width": 640,
   "preview_quality": 68,
-  "pid": 3900,
-  "started_at": "2026-07-04 10:21:00",
-  "started_at_epoch": 1783160460.6850138,
+  "pid": 3785,
+  "started_at": "2026-07-11 11:00:55",
+  "started_at_epoch": 1783767655.5594518,
   "managed_by_api": true
 }

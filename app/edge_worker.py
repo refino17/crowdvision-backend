@@ -38,6 +38,15 @@ import cv2
 import requests
 
 try:
+    from app.security_config import get_edge_api_key
+except Exception:
+    try:
+        from security_config import get_edge_api_key
+    except Exception:
+        def get_edge_api_key():
+            return os.environ.get("CROWDVISION_EDGE_API_KEY", "")
+
+try:
     cv2.setNumThreads(1)
 except Exception:
     pass
@@ -140,9 +149,16 @@ class OptionalYoloCounter:
             return 0, 0.0
 
 
-def post_telemetry(api_base_url, payload, timeout=4):
+def build_security_headers(api_key=""):
+    key = str(api_key or "").strip()
+    if not key:
+        return {}
+    return {"X-CrowdVision-Edge-Key": key}
+
+
+def post_telemetry(api_base_url, payload, timeout=4, api_key=""):
     url = api_base_url.rstrip("/") + "/api/edge/telemetry"
-    response = requests.post(url, json=payload, timeout=timeout)
+    response = requests.post(url, json=payload, headers=build_security_headers(api_key), timeout=timeout)
     response.raise_for_status()
     return response.json()
 
@@ -161,7 +177,7 @@ def resize_for_preview(frame, width=640):
     return cv2.resize(frame, (width, new_height), interpolation=cv2.INTER_AREA)
 
 
-def post_preview(api_base_url, edge_id, frame, width=640, quality=68, timeout=4):
+def post_preview(api_base_url, edge_id, frame, width=640, quality=68, timeout=4, api_key=""):
     if frame is None or frame.size == 0:
         return None
 
@@ -179,7 +195,7 @@ def post_preview(api_base_url, edge_id, frame, width=640, quality=68, timeout=4)
     files = {
         "file": (f"{edge_id}.jpg", encoded.tobytes(), "image/jpeg")
     }
-    response = requests.post(url, files=files, timeout=timeout)
+    response = requests.post(url, files=files, headers=build_security_headers(api_key), timeout=timeout)
     response.raise_for_status()
     return response.json()
 
@@ -195,6 +211,7 @@ def save_local_cache(edge_id, payload):
 def run_edge_worker(args):
     source = parse_source(args.source)
     api_base_url = args.api.rstrip("/")
+    api_key = str(args.api_key or get_edge_api_key() or "").strip()
     source_label = get_camera_source_label(source)
 
     cap = open_camera_source(source)
@@ -231,6 +248,7 @@ def run_edge_worker(args):
     print(f"Source: {source}")
     print(f"Source Label: {source_label}")
     print(f"Central API: {api_base_url}")
+    print(f"Security Key: {'Enabled' if api_key else 'Not configured'}")
     preview_enabled = not args.no_preview
 
     print(f"YOLO Detection: {args.detect}")
@@ -279,7 +297,7 @@ def run_edge_worker(args):
             }
 
             try:
-                post_telemetry(api_base_url, payload, timeout=args.timeout)
+                post_telemetry(api_base_url, payload, timeout=args.timeout, api_key=api_key)
                 print("No-signal telemetry sent.")
             except Exception as error:
                 print(f"Telemetry failed: {error}")
@@ -309,7 +327,8 @@ def run_edge_worker(args):
                     frame=frame,
                     width=args.preview_width,
                     quality=args.preview_quality,
-                    timeout=min(max(args.timeout, 2.0), 6.0)
+                    timeout=min(max(args.timeout, 2.0), 6.0),
+                    api_key=api_key
                 )
             except Exception as error:
                 if current_time - last_preview_error_time >= 10:
@@ -360,7 +379,7 @@ def run_edge_worker(args):
             }
 
             try:
-                response = post_telemetry(api_base_url, payload, timeout=args.timeout)
+                response = post_telemetry(api_base_url, payload, timeout=args.timeout, api_key=api_key)
                 print(
                     f"Sent edge telemetry | people={people} density={density} "
                     f"fps={fps} ai_fps={ai_fps} response={response.get('message')}"
@@ -398,6 +417,7 @@ def build_parser():
     parser.add_argument("--source", default="0", help="Camera source: 0, video path, HTTP, RTSP, etc.")
     parser.add_argument("--location", default="Unassigned", help="Physical location label")
     parser.add_argument("--api", default="http://127.0.0.1:8000", help="Central CrowdVision API base URL")
+    parser.add_argument("--api-key", default="", help="Optional CrowdVision remote camera security key")
 
     parser.add_argument("--interval", type=float, default=5.0, help="Seconds between telemetry posts")
     parser.add_argument("--timeout", type=float, default=4.0, help="HTTP timeout in seconds")

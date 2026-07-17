@@ -11,8 +11,12 @@
   "process_every": 10,
   "location": "Demo Video Source",
   "display": false,
-  "pid": 6223,
-  "started_at": "2026-07-04 06:51:00",
-  "started_at_epoch": 1783147860.2431712,
+  "preview": true,
+  "preview_interval": 1.0,
+  "preview_width": 640,
+  "preview_quality": 68,
+  "pid": 3775,
+  "started_at": "2026-07-11 11:00:47",
+  "started_at_epoch": 1783767647.0323253,
   "managed_by_api": true
 }
